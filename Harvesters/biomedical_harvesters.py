@@ -60,6 +60,10 @@ class HarvestOBOWrapper(HarvesterWrapper):
         self._base_folder = os.path.abspath(file_path)
         self._input_obo_name = ntpath.basename(file_path).strip(".obo")
 
+    @property
+    def input_obo_name(self):
+        return self._input_obo_name
+
     def _get_settings(self):
         return {"baseFolder": self._base_folder, "inputOBOName": self._input_obo_name, "mongodb": self._mongo_config}
 
