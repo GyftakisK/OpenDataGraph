@@ -7,11 +7,11 @@ from utilities import run_jar
 
 class HarvesterWrapper:
     def __init__(self, harvester_jar_name, mongo_host, mongo_host_port, mongo_dbname):
-        self._harvester_jar_name = harvester_jar_name
+        self._harvester_jar = os.path.join(os.path.dirname(os.path.realpath(__file__)), harvester_jar_name)
         self._mongo_config = {"host": mongo_host,
                               "port": mongo_host_port,
                               "dbname": mongo_dbname}
-        self._settings_file = "settings.yaml"
+        self._settings_file = os.path.join(os.path.dirname(os.path.realpath(__file__)), "settings.yaml")
 
     def run(self):
         self._create_settings_file()
@@ -22,11 +22,12 @@ class HarvesterWrapper:
 
     def _create_settings_file(self):
         settings = self._get_settings()
+        print(settings)
         with open(self._settings_file, 'w') as settings_file:
             yaml.dump(settings, settings_file)
 
     def _run_jar(self, args):
-        return run_jar(self._harvester_jar_name, args)
+        return run_jar(self._harvester_jar, args)
 
     def _clean_settings_file(self):
         os.remove(self._settings_file)
@@ -51,13 +52,13 @@ class HarvestDrugBankWrapper(HarvesterWrapper):
         return {"inputFilePath": self._file_path, "mongodb": self._mongo_config}
 
     def _get_jar_arguments(self):
-        return self._settings_file
+        return [self._settings_file]
 
 
 class HarvestOBOWrapper(HarvesterWrapper):
     def __init__(self, file_path, mongo_host, mongo_host_port, mongo_dbname):
         super().__init__("HarvestOBO.jar", mongo_host, mongo_host_port, mongo_dbname)
-        self._base_folder = os.path.abspath(file_path)
+        self._base_folder = os.path.dirname(os.path.realpath(file_path))
         self._input_obo_name = ntpath.basename(file_path).strip(".obo")
 
     @property
@@ -68,12 +69,12 @@ class HarvestOBOWrapper(HarvesterWrapper):
         return {"baseFolder": self._base_folder, "inputOBOName": self._input_obo_name, "mongodb": self._mongo_config}
 
     def _get_jar_arguments(self):
-        return self._settings_file
+        return [self._settings_file]
 
 
 class HarvestEntrezWrapper(HarvesterWrapper):
     def __init__(self, dataset_id, mesh_term, base_dir, last_update,  mongo_host, mongo_host_port, mongo_dbname):
-        super().__init__("HarvestOBO.jar", mongo_host, mongo_host_port, mongo_dbname)
+        super().__init__("HarvestEntrez.jar", mongo_host, mongo_host_port, mongo_dbname)
         self._base_folder = base_dir
         self._last_update = last_update.strftime("%Y/%m/%d")
         self._dataset_id = dataset_id
@@ -83,4 +84,4 @@ class HarvestEntrezWrapper(HarvesterWrapper):
         return {"baseFolder": self._base_folder, "lastUpdate": self._last_update, "mongodb": self._mongo_config}
 
     def _get_jar_arguments(self):
-        return self._dataset_id, self._mesh_term, datetime.datetime.now().strftime("%Y/%m/%d")
+        return [self._dataset_id, self._mesh_term, self._last_update, self._settings_file]

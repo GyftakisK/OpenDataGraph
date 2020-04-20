@@ -19,7 +19,7 @@ def run_jar(jar_name,  args=()):
     command = ['java', '-jar', jar_name]
     command.extend(args)
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = subprocess.run(command)
     except subprocess.CalledProcessError as e:
         raise CommandExecutionFailed(e.output)
 

@@ -1,4 +1,8 @@
+#!/usr/bin/env python
+
+
 import configparser
+import argparse
 import datetime
 import pymongo
 from Harvesters.biomedical_harvesters import HarvestEntrezWrapper, HarvestOBOWrapper, HarvestDrugBankWrapper
@@ -11,6 +15,10 @@ class DiseaseGraph:
         self._mongodb_port = int(config["mongoDB"]["port"])
         self._mongodb_db_name = config["mongoDB"]["db_name"]
         self._temp_dir = config["filesystem"]["temp_dir"]
+        self._mongo_client = None
+        self._mongodb_inst = None
+
+    def setup(self):
         self._mongo_client = pymongo.MongoClient(self._mongodb_host, self._mongodb_port)
         self._mongodb_inst = self._mongo_client[self._mongodb_db_name]
 
@@ -40,9 +48,11 @@ class DiseaseGraph:
         job_name = "{}_obo".format(harvester.input_obo_name)
         self._update_job_metadata(job_name)
 
-    def update_disease(self, dataset_id, mesh_term):
+    def update_disease(self, mesh_term):
+        dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
         job_name = "{}_entrez".format(dataset_id)
         entry = self._mongodb_inst['metadata'].find_one({"harvester": job_name})
+        print(entry)
         if entry:
             last_update = entry["lastUpdate"]
         else:
@@ -54,3 +64,31 @@ class DiseaseGraph:
 
     def cleanup(self):
         self._mongo_client.close()
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--harvest_literature", metavar='mesh_term',
+                        help="Retrieve online articles relevant to a MeSH term from PubMed and PMC")
+    parser.add_argument("--harvest_obo", metavar='path_to_obo',
+                        help="Process the OBO file of biomedical ontologies")
+    parser.add_argument("--harvest_drugbank", metavar='path_to_xml',
+                        help="Process the XML file of DrugBank")
+    args = parser.parse_args()
+
+    disease_graph = DiseaseGraph()
+
+    try:
+        disease_graph.setup()
+        if args.harvest_obo:
+            disease_graph.update_obo(args.harvest_obo)
+        if args.harvest_drugbank:
+            disease_graph.update_drugbank(args.harvest_drugbank)
+        if args.harvest_literature:
+            disease_graph.update_disease(args.harvest_literature)
+    finally:
+        disease_graph.cleanup()
+
+
+if __name__ == "__main__":
+    main()
