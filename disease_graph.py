@@ -6,6 +6,7 @@ import argparse
 import datetime
 import pymongo
 from Harvesters.biomedical_harvesters import HarvestEntrezWrapper, HarvestOBOWrapper, HarvestDrugBankWrapper
+from utilities import get_filename_from_file_path
 
 
 class DiseaseGraph:
@@ -30,29 +31,32 @@ class DiseaseGraph:
         return config
 
     def _update_job_metadata(self, job_name):
-        if self._mongodb_inst['metadata'].find_one({"harvester": job_name}):
-            self._mongodb_inst['metadata'].find_and_modify(query={"harvester": job_name},
+        if self._mongodb_inst['metadata'].find_one({"job": job_name}):
+            self._mongodb_inst['metadata'].find_and_modify(query={"job": job_name},
                                                            update={"$set": {'lastUpdate': datetime.datetime.now()}})
         else:
-            self._mongodb_inst['metadata'].insert_one({"harvester": job_name, "lastUpdate": datetime.datetime.now()})
+            self._mongodb_inst['metadata'].insert_one({"job": job_name, "lastUpdate": datetime.datetime.now()})
 
-    def update_drugbank(self, filename):
-        harvester = HarvestDrugBankWrapper(filename, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
+    def update_drugbank(self, path_to_file):
+        version = self._get_version()
+        job_name = "drugbank_{}".format(version)
+        harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
+                                           job_name)
         harvester.run()
-        job_name = "drugbank"
         self._update_job_metadata(job_name)
 
-    def update_obo(self, filename):
-        harvester = HarvestOBOWrapper(filename, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
+    def update_obo(self, path_to_file):
+        version = self._get_version()
+        harvester = HarvestOBOWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
         harvester.run()
-        job_name = "{}_obo".format(harvester.input_obo_name)
+        job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
+        self._rename_collection(harvester.input_obo_name, job_name)
         self._update_job_metadata(job_name)
 
     def update_disease(self, mesh_term):
         dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
         job_name = "{}_entrez".format(dataset_id)
-        entry = self._mongodb_inst['metadata'].find_one({"harvester": job_name})
-        print(entry)
+        entry = self._mongodb_inst['metadata'].find_one({"job": job_name})
         if entry:
             last_update = entry["lastUpdate"]
         else:
@@ -60,10 +64,33 @@ class DiseaseGraph:
         harvester = HarvestEntrezWrapper(dataset_id, mesh_term, self._temp_dir, last_update, self._mongodb_host,
                                          self._mongodb_port, self._mongodb_db_name)
         harvester.run()
+        for suffix in ["pmc", "pubmed", "pubmed_MeSH"]:
+            current_name = "{dataset_id}_{suffix}".format(dataset_id=dataset_id, suffix=suffix)
+            new_name = "{cur_name}_{cur_date}-{last_update}".format(cur_name=current_name,
+                                                                    cur_date=datetime.datetime.now().strftime("%Y_%m_%d"),
+                                                                    last_update=last_update)
+            self._rename_collection(current_name, new_name)
         self._update_job_metadata(job_name)
 
     def cleanup(self):
         self._mongo_client.close()
+
+    @staticmethod
+    def _get_version():
+        """
+        Get data version (currently harvesting date)
+        :return: string representing data version
+        """
+        return datetime.datetime.now().strftime("%Y_%m_%d")
+
+    def _rename_collection(self, old_name, new_name):
+        """
+        Rename mongoDb collection
+        :param old_name: Old name of collection
+        :param new_name: New name of collection
+        :return:
+        """
+        self._mongodb_inst[old_name].rename(new_name)
 
 
 def main():

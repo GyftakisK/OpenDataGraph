@@ -1,5 +1,5 @@
 import subprocess
-
+import ntpath
 
 class DiseaseGraphException(Exception):
     pass
@@ -24,3 +24,12 @@ def run_jar(jar_name,  args=()):
         raise CommandExecutionFailed(e.output)
 
     return result.stdout
+
+
+def get_filename_from_file_path(path):
+    """
+    Utility function to get filename from path
+    :param path: Path to file
+    :return: filename
+    """
+    return ntpath.basename(path)

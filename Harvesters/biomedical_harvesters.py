@@ -1,8 +1,7 @@
 import yaml
 import os
 import ntpath
-import datetime
-from utilities import run_jar
+from utilities import run_jar, get_filename_from_file_path
 
 
 class HarvesterWrapper:
@@ -43,7 +42,7 @@ class HarvesterWrapper:
 
 
 class HarvestDrugBankWrapper(HarvesterWrapper):
-    def __init__(self, file_path, mongo_host, mongo_host_port, mongo_dbname, mongo_collection="DrugBank"):
+    def __init__(self, file_path, mongo_host, mongo_host_port, mongo_dbname, mongo_collection):
         super().__init__("HarvestDrugBank.jar", mongo_host, mongo_host_port, mongo_dbname)
         self._mongo_config["collection"] = mongo_collection
         self._file_path = file_path
@@ -59,7 +58,8 @@ class HarvestOBOWrapper(HarvesterWrapper):
     def __init__(self, file_path, mongo_host, mongo_host_port, mongo_dbname):
         super().__init__("HarvestOBO.jar", mongo_host, mongo_host_port, mongo_dbname)
         self._base_folder = os.path.dirname(os.path.realpath(file_path))
-        self._input_obo_name = ntpath.basename(file_path).strip(".obo")
+        filename = get_filename_from_file_path(file_path)
+        self._input_obo_name = filename.strip(".obo") if ".obo" in filename else filename
 
     @property
     def input_obo_name(self):
