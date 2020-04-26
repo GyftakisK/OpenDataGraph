@@ -181,6 +181,14 @@ class DiseaseGraph:
             settings["load"]["edges"]["obj_source"] = "GO"
             settings["neo4j"]["resource"] = job_name
             settings["out"]["json"]["itemfield"] = obo_type
+        elif obo_type == "MESH":
+            settings["load"]["edges"]["itemfield"] = obo_type
+            settings["load"]["edges"]["sub_type"] = "Entity"
+            settings["load"]["edges"]["obj_type"] = "Entity"
+            settings["load"]["edges"]["sub_source"] = "MSH"
+            settings["load"]["edges"]["obj_source"] = "MSH"
+            settings["neo4j"]["resource"] = job_name
+            settings["out"]["json"]["itemfield"] = obo_type
         task_manager = taskCoordinator()
         task_manager.print_pipeline()
         task_manager.run()
@@ -224,7 +232,7 @@ def main():
     try:
         disease_graph.setup()
         if args.harvest_obo:
-            disease_graph.update_obo(args.harvest_obo, "GO")
+            disease_graph.update_obo(args.harvest_obo, "MESH")
         if args.harvest_drugbank:
             disease_graph.update_drugbank(args.harvest_drugbank)
         if args.harvest_literature:
