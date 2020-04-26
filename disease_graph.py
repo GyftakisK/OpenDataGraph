@@ -148,6 +148,9 @@ class DiseaseGraph:
                                            job_name)
         harvester.run()
         self._update_job_metadata(job_name)
+        self._set_basic_medknow_settings()
+        self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
+        self._run_medknow()
 
     def update_obo(self, path_to_file, obo_type):
         version = self._get_version()
@@ -157,41 +160,39 @@ class DiseaseGraph:
         self._rename_collection(harvester.input_obo_name, job_name)
         self._update_job_metadata(job_name)
         self._set_basic_medknow_settings()
-        settings["pipeline"]["in"]["type"] = "edges"
-        settings["pipeline"]["trans"]["get_concepts_from_edges"] = True
-        settings["load"]["mongo"]["collection"] = job_name
-        settings["load"]["mongo"]["file_path"] = "mongodb://{host}:{port}/{db}|{collection}".format(
-            host=self._mongodb_host,
-            port=self._mongodb_port,
-            db=self._mongodb_db_name,
-            collection=job_name)
-        if obo_type == "DO":
-            settings["load"]["edges"]["itemfield"] = obo_type
-            settings["load"]["edges"]["sub_type"] = "Entity"
-            settings["load"]["edges"]["obj_type"] = "Entity"
-            settings["load"]["edges"]["sub_source"] = "UMLS"
-            settings["load"]["edges"]["obj_source"] = "UMLS"
-            settings["neo4j"]["resource"] = job_name
-            settings["out"]["json"]["itemfield"] = obo_type
-        elif obo_type == "GO":
-            settings["load"]["edges"]["itemfield"] = obo_type
-            settings["load"]["edges"]["sub_type"] = "Entity"
-            settings["load"]["edges"]["obj_type"] = "Entity"
-            settings["load"]["edges"]["sub_source"] = "GO"
-            settings["load"]["edges"]["obj_source"] = "GO"
-            settings["neo4j"]["resource"] = job_name
-            settings["out"]["json"]["itemfield"] = obo_type
-        elif obo_type == "MESH":
-            settings["load"]["edges"]["itemfield"] = obo_type
-            settings["load"]["edges"]["sub_type"] = "Entity"
-            settings["load"]["edges"]["obj_type"] = "Entity"
-            settings["load"]["edges"]["sub_source"] = "MSH"
-            settings["load"]["edges"]["obj_source"] = "MSH"
-            settings["neo4j"]["resource"] = job_name
-            settings["out"]["json"]["itemfield"] = obo_type
+        self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
+        self._run_medknow()
+
+    @staticmethod
+    def _run_medknow():
         task_manager = taskCoordinator()
         task_manager.print_pipeline()
         task_manager.run()
+
+    def _set_edge_specific_medknow_settings(self, collection, resource, job_type):
+        sub_source_from_type = {"DO": "UMLS",
+                                "GO": "GO",
+                                "MESH": "MSH",
+                                "DRUGBANK": "DRUGBANK"}
+        obj_source_from_type = {"DO": "UMLS",
+                                "GO": "GO",
+                                "MESH": "MSH",
+                                "DRUGBANK": "DRUGBANK"}
+        settings["pipeline"]["in"]["type"] = "edges"
+        settings["pipeline"]["trans"]["get_concepts_from_edges"] = True
+        settings["load"]["mongo"]["collection"] = collection
+        settings["load"]["mongo"]["file_path"] = "mongodb://{host}:{port}/{db}|{collection}".format(
+                                                                                            host=self._mongodb_host,
+                                                                                            port=self._mongodb_port,
+                                                                                            db=self._mongodb_db_name,
+                                                                                            collection=collection)
+        settings["load"]["edges"]["itemfield"] = job_type
+        settings["load"]["edges"]["sub_type"] = "Entity"
+        settings["load"]["edges"]["obj_type"] = "Entity"
+        settings["load"]["edges"]["sub_source"] = sub_source_from_type[job_type]
+        settings["load"]["edges"]["obj_source"] = obj_source_from_type[job_type]
+        settings["neo4j"]["resource"] = resource
+        settings["out"]["json"]["itemfield"] = job_type
 
     def update_disease(self, mesh_term):
         dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
