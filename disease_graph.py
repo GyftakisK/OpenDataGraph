@@ -5,10 +5,10 @@ import configparser
 import argparse
 import datetime
 import multiprocessing
-import pymongo
 import os
 import logging
-from Harvesters.biomedical_harvesters import HarvestEntrezWrapper, HarvestOBOWrapper, HarvestDrugBankWrapper
+from db_manager.mongodb_manager import MongoDbManager
+from harvesters.biomedical_harvesters import HarvestEntrezWrapper, HarvestOBOWrapper, HarvestDrugBankWrapper
 from medknow.tasks import taskCoordinator
 from medknow.config import settings
 
@@ -29,12 +29,10 @@ class DiseaseGraph:
         self._neo4j_user = config["neo4j"]["user"]
         self._neo4j_pass = config["neo4j"]["password"]
         self._umls_api_key = config["apis"]["umls"]
-        self._mongo_client = None
-        self._mongodb_inst = None
+        self._mongodb_manager = None
 
     def setup(self):
-        self._mongo_client = pymongo.MongoClient(self._mongodb_host, self._mongodb_port)
-        self._mongodb_inst = self._mongo_client[self._mongodb_db_name]
+        self._mongodb_manager = MongoDbManager(self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
         logging.basicConfig(level=logging.DEBUG,
                             format="%(asctime)s - %(message)s",
                             handlers=[logging.FileHandler(os.path.join(self._temp_dir, "temp.log")),
@@ -59,20 +57,10 @@ class DiseaseGraph:
         return available_cpus
 
     def _update_job_metadata(self, job_name):
-        if self._mongodb_inst['metadata'].find_one({"job": job_name}):
-            self._mongodb_inst['metadata'].find_and_modify(query={"job": job_name},
-                                                           update={"$set": {'lastUpdate': datetime.datetime.now()}})
+        if self._mongodb_manager.get_entry_from_field('metadata', "job", job_name):
+            self._mongodb_manager.update_field('metadata', "job", job_name, 'lastUpdate', datetime.datetime.now())
         else:
-            self._mongodb_inst['metadata'].insert_one({"job": job_name, "lastUpdate": datetime.datetime.now()})
-
-    def _rename_collection(self, old_name, new_name):
-        """
-        Rename mongoDb collection
-        :param old_name: Old name of collection
-        :param new_name: New name of collection
-        :return:
-        """
-        self._mongodb_inst[old_name].rename(new_name)
+            self._mongodb_manager.insert_entry('metadata', {"job": job_name, "lastUpdate": datetime.datetime.now()})
 
     @staticmethod
     def _get_version():
@@ -144,28 +132,6 @@ class DiseaseGraph:
         settings["out"]["neo4j"]["out_path"] = "{host}:{port}".format(host=self._neo4j_host,
                                                                       port=self._neo4j_port)
 
-    def update_drugbank(self, path_to_file):
-        version = self._get_version()
-        job_name = "drugbank_{}".format(version)
-        harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
-                                           job_name)
-        harvester.run()
-        self._update_job_metadata(job_name)
-        self._set_basic_medknow_settings()
-        self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
-        self._run_medknow()
-
-    def update_obo(self, path_to_file, obo_type):
-        version = self._get_version()
-        harvester = HarvestOBOWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
-        harvester.run()
-        job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
-        self._rename_collection(harvester.input_obo_name, job_name)
-        self._update_job_metadata(job_name)
-        self._set_basic_medknow_settings()
-        self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
-        self._run_medknow()
-
     @staticmethod
     def _run_medknow():
         task_manager = taskCoordinator()
@@ -209,10 +175,32 @@ class DiseaseGraph:
         settings["neo4j"]["resource"] = resource
         settings["out"]["json"]["itemfield"] = job_type
 
+    def update_drugbank(self, path_to_file):
+        version = self._get_version()
+        job_name = "drugbank_{}".format(version)
+        harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
+                                           job_name)
+        harvester.run()
+        self._update_job_metadata(job_name)
+        self._set_basic_medknow_settings()
+        self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
+        self._run_medknow()
+
+    def update_obo(self, path_to_file, obo_type):
+        version = self._get_version()
+        harvester = HarvestOBOWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
+        harvester.run()
+        job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
+        self._mongodb_manager.rename_collection(harvester.input_obo_name, job_name)
+        self._update_job_metadata(job_name)
+        self._set_basic_medknow_settings()
+        self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
+        self._run_medknow()
+
     def update_disease(self, mesh_term):
         dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
         job_name = "{}_entrez".format(dataset_id)
-        entry = self._mongodb_inst['metadata'].find_one({"job": job_name})
+        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", job_name)
         if entry:
             last_update = entry["lastUpdate"]
         else:
@@ -228,13 +216,10 @@ class DiseaseGraph:
                                                                         "%Y_%m_%d"),
                                                                     last_update=last_update.strftime(
                                                                         "%Y_%m_%d"))
-            if self._collection_exists(current_name):
-                self._rename_collection(current_name, new_name)
+            if self._mongodb_manager.collection_exists(current_name):
+                self._mongodb_manager.rename_collection(current_name, new_name)
                 if DEBUG:
-                    documents = self._mongodb_inst[new_name].find()
-                    delete_docs = documents[3:]
-                    for document in delete_docs:
-                        self._mongodb_inst[new_name].delete_one({"_id" : document["_id"]})
+                    self._mongodb_manager.prune_collection(new_name)
             collections[suffix] = new_name
         # self._update_job_metadata(job_name)
 
@@ -247,10 +232,7 @@ class DiseaseGraph:
                 self._run_medknow()
 
     def cleanup(self):
-        self._mongo_client.close()
-
-    def _collection_exists(self, current_name):
-        return current_name in self._mongodb_inst.collection_names()
+        self._mongodb_manager.on_exit()
 
 
 def main():
