@@ -13,6 +13,9 @@ from medknow.tasks import taskCoordinator
 from medknow.config import settings
 
 
+DEBUG = True
+
+
 class DiseaseGraph:
     def __init__(self, settings_file="config.ini"):
         config = self._read_config(settings_file)
@@ -173,11 +176,23 @@ class DiseaseGraph:
         sub_source_from_type = {"DO": "UMLS",
                                 "GO": "GO",
                                 "MESH": "MSH",
-                                "DRUGBANK": "DRUGBANK"}
+                                "DRUGBANK": "DRUGBANK",
+                                "pubmed_MeSH": "TEXT"}
         obj_source_from_type = {"DO": "UMLS",
                                 "GO": "GO",
                                 "MESH": "MSH",
-                                "DRUGBANK": "DRUGBANK"}
+                                "DRUGBANK": "DRUGBANK",
+                                "pubmed_MeSH": "MSH"}
+        sub_type_from_type = {"DO": "Entity",
+                              "GO": "Entity",
+                              "MESH": "Entity",
+                              "DRUGBANK": "Entity",
+                              "pubmed_MeSH": "Article"}
+        obj_type_from_type = {"DO": "Entity",
+                              "GO": "Entity",
+                              "MESH": "Entity",
+                              "DRUGBANK": "Entity",
+                              "pubmed_MeSH": "Entity"}
         settings["pipeline"]["in"]["type"] = "edges"
         settings["pipeline"]["trans"]["get_concepts_from_edges"] = True
         settings["load"]["mongo"]["collection"] = collection
@@ -187,8 +202,8 @@ class DiseaseGraph:
                                                                                             db=self._mongodb_db_name,
                                                                                             collection=collection)
         settings["load"]["edges"]["itemfield"] = job_type
-        settings["load"]["edges"]["sub_type"] = "Entity"
-        settings["load"]["edges"]["obj_type"] = "Entity"
+        settings["load"]["edges"]["sub_type"] = sub_type_from_type[job_type]
+        settings["load"]["edges"]["obj_type"] = obj_type_from_type[job_type]
         settings["load"]["edges"]["sub_source"] = sub_source_from_type[job_type]
         settings["load"]["edges"]["obj_source"] = obj_source_from_type[job_type]
         settings["neo4j"]["resource"] = resource
@@ -201,21 +216,41 @@ class DiseaseGraph:
         if entry:
             last_update = entry["lastUpdate"]
         else:
-            last_update = datetime.date(1900, 1, 1)
+            last_update = datetime.date(2020, 4, 24)
         harvester = HarvestEntrezWrapper(dataset_id, mesh_term, self._temp_dir, last_update, self._mongodb_host,
                                          self._mongodb_port, self._mongodb_db_name)
         harvester.run()
+        collections = dict()
         for suffix in ["pmc", "pubmed", "pubmed_MeSH"]:
             current_name = "{dataset_id}_{suffix}".format(dataset_id=dataset_id, suffix=suffix)
-            new_name = "{cur_name}_{cur_date}-{last_update}".format(cur_name=current_name,
+            new_name = "{cur_name}_{cur_date}_{last_update}".format(cur_name=current_name,
                                                                     cur_date=datetime.datetime.now().strftime(
                                                                         "%Y_%m_%d"),
-                                                                    last_update=last_update)
-            self._rename_collection(current_name, new_name)
-        self._update_job_metadata(job_name)
+                                                                    last_update=last_update.strftime(
+                                                                        "%Y_%m_%d"))
+            if self._collection_exists(current_name):
+                self._rename_collection(current_name, new_name)
+                if DEBUG:
+                    documents = self._mongodb_inst[new_name].find()
+                    delete_docs = documents[3:]
+                    for document in delete_docs:
+                        self._mongodb_inst[new_name].delete_one({"_id" : document["_id"]})
+            collections[suffix] = new_name
+        # self._update_job_metadata(job_name)
+
+        for collection_type in collections.keys():
+            self._set_basic_medknow_settings()
+            if collection_type == "pubmed_MeSH":
+                self._set_edge_specific_medknow_settings(collections[collection_type],
+                                                         job_name, "pubmed_MeSH")
+
+                self._run_medknow()
 
     def cleanup(self):
         self._mongo_client.close()
+
+    def _collection_exists(self, current_name):
+        return current_name in self._mongodb_inst.collection_names()
 
 
 def main():
