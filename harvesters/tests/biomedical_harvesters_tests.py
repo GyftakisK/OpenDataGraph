@@ -2,7 +2,7 @@ import unittest
 import os
 import datetime
 from unittest.mock import MagicMock
-from Harvesters.biomedical_harvesters import HarvestDrugBankWrapper, HarvestOBOWrapper, HarvestEntrezWrapper
+from harvesters.biomedical_harvesters import HarvestDrugBankWrapper, HarvestOBOWrapper, HarvestEntrezWrapper
 
 
 class HarvestersTestSuite(unittest.TestCase):
