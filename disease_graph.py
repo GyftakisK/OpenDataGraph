@@ -139,26 +139,17 @@ class DiseaseGraph:
         task_manager.run()
 
     def _set_edge_specific_medknow_settings(self, collection, resource, job_type):
-        sub_source_from_type = {"DO": "UMLS",
-                                "GO": "GO",
-                                "MESH": "MSH",
-                                "DRUGBANK": "DRUGBANK",
-                                "pubmed_MeSH": "TEXT"}
-        obj_source_from_type = {"DO": "UMLS",
-                                "GO": "GO",
-                                "MESH": "MSH",
-                                "DRUGBANK": "DRUGBANK",
-                                "pubmed_MeSH": "MSH"}
-        sub_type_from_type = {"DO": "Entity",
-                              "GO": "Entity",
-                              "MESH": "Entity",
-                              "DRUGBANK": "Entity",
-                              "pubmed_MeSH": "Article"}
-        obj_type_from_type = {"DO": "Entity",
-                              "GO": "Entity",
-                              "MESH": "Entity",
-                              "DRUGBANK": "Entity",
-                              "pubmed_MeSH": "Entity"}
+        settings_from_type = {"DO": {"sub": {"source": "UMLS", "type": "Entity"},
+                                     "obj": {"source": "UMLS", "type": "Entity"}},
+                              "GO": {"sub": {"source": "GO", "type": "Entity"},
+                                     "obj": {"source": "GO", "type": "Entity"}},
+                              "MESH": {"sub": {"source": "MSH", "type": "Entity"},
+                                       "obj": {"source": "MSH", "type": "Entity"}},
+                              "DRUGBANK": {"sub": {"source": "DRUGBANK", "type": "Entity"},
+                                           "obj": {"source": "DRUGBANK", "type": "Entity"}},
+                              "pubmed_MeSH": {"sub": {"source": "TEXT", "type": "Article"},
+                                              "obj": {"source": "MSH", "type": "Entity"}},
+                              }
         settings["pipeline"]["in"]["type"] = "edges"
         settings["pipeline"]["trans"]["get_concepts_from_edges"] = True
         settings["load"]["mongo"]["collection"] = collection
@@ -168,10 +159,10 @@ class DiseaseGraph:
                                                                                             db=self._mongodb_db_name,
                                                                                             collection=collection)
         settings["load"]["edges"]["itemfield"] = job_type
-        settings["load"]["edges"]["sub_type"] = sub_type_from_type[job_type]
-        settings["load"]["edges"]["obj_type"] = obj_type_from_type[job_type]
-        settings["load"]["edges"]["sub_source"] = sub_source_from_type[job_type]
-        settings["load"]["edges"]["obj_source"] = obj_source_from_type[job_type]
+        settings["load"]["edges"]["sub_type"] = settings_from_type[job_type]["sub"]["type"]
+        settings["load"]["edges"]["obj_type"] = settings_from_type[job_type]["obj"]["type"]
+        settings["load"]["edges"]["sub_source"] = settings_from_type[job_type]["sub"]["source"]
+        settings["load"]["edges"]["obj_source"] = settings_from_type[job_type]["obj"]["source"]
         settings["neo4j"]["resource"] = resource
         settings["out"]["json"]["itemfield"] = job_type
 
