@@ -21,7 +21,6 @@ class HarvesterWrapper:
 
     def _create_settings_file(self):
         settings = self._get_settings()
-        print(settings)
         with open(self._settings_file, 'w') as settings_file:
             yaml.dump(settings, settings_file)
 
@@ -73,15 +72,16 @@ class HarvestOBOWrapper(HarvesterWrapper):
 
 
 class HarvestEntrezWrapper(HarvesterWrapper):
-    def __init__(self, dataset_id, mesh_term, base_dir, last_update,  mongo_host, mongo_host_port, mongo_dbname):
+    def __init__(self, dataset_id, mesh_terms, base_dir, date_from, date_to,  mongo_host, mongo_host_port, mongo_dbname):
         super().__init__("HarvestEntrez.jar", mongo_host, mongo_host_port, mongo_dbname)
         self._base_folder = base_dir
-        self._last_update = last_update.strftime("%Y/%m/%d")
+        self._dates = {"from": date_from.strftime("%Y/%m/%d"), "to": date_to.strftime("%Y/%m/%d")}
         self._dataset_id = dataset_id
-        self._mesh_term = mesh_term
+        self._mesh_terms = mesh_terms if type(mesh_terms) == list else [mesh_terms]
 
     def _get_settings(self):
-        return {"baseFolder": self._base_folder, "lastUpdate": self._last_update, "mongodb": self._mongo_config}
+        return {"baseFolder": self._base_folder, "date": self._dates, "meshTerms": self._mesh_terms,
+                "datesetId": self._dataset_id, "mongodb": self._mongo_config}
 
     def _get_jar_arguments(self):
-        return [self._dataset_id, self._mesh_term, self._last_update, self._settings_file]
+        return [self._settings_file]
