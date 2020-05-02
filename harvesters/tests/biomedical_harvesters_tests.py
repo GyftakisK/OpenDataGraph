@@ -53,7 +53,7 @@ class HarvestersTestSuite(unittest.TestCase):
         expected_settings = [
             "baseFolder: /test_path/",
             "date: {from: 2020/04/15, to: 2020/05/15}",
-            "datesetId: DMD",
+            "datasetId: DMD",
             "meshTerms: ['Muscular Dystrophy, Duchenne']",
             "mongodb: {dbname: test, host: 127.0.0.1, port: 27017}"
         ]
@@ -71,11 +71,12 @@ class HarvestersTestSuite(unittest.TestCase):
         expected_settings = [
             "baseFolder: /test_path/",
             "date: {from: 2020/04/15, to: 2020/05/15}",
-            "datesetId: UPDATE",
+            "datasetId: UPDATE",
             "meshTerms: ['Muscular Dystrophy, Duchenne', Lung Cancer]",
             "mongodb: {dbname: test, host: 127.0.0.1, port: 27017}"
         ]
         self.assert_harvester_settings(harvester, expected_settings)
+
 
 if __name__ == '__main__':
     unittest.main()

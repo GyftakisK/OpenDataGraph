@@ -57,13 +57,13 @@ class DiseaseGraph:
             available_cpus -= 1
         return available_cpus
 
-    def _update_job_metadata(self, job_name, input_):
+    def _update_job_metadata(self, job_name, input_, last_update=datetime.datetime.now()):
         if self._mongodb_manager.get_entry_from_field('metadata', "job", job_name):
-            self._mongodb_manager.update_field('metadata', "job", job_name, 'lastUpdate', datetime.datetime.now())
+            self._mongodb_manager.update_field('metadata', "job", job_name, 'lastUpdate', last_update)
             self._mongodb_manager.update_field('metadata', "job", job_name, 'input', input_)
         else:
             self._mongodb_manager.insert_entry('metadata', {"job": job_name, 'input': input_,
-                                                            "lastUpdate": datetime.datetime.now()})
+                                                            "lastUpdate": last_update})
 
     @staticmethod
     def _get_version():
@@ -225,13 +225,54 @@ class DiseaseGraph:
 
                 self._run_medknow()
 
+    def add_disease(self, mesh_term):
+        dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
+        job_name = "disease_literature"
+        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", job_name)
+        if entry:
+            mesh_terms = entry["input"]
+            if mesh_term in mesh_terms:
+                logging.error("MeSH TERM: {} already in DB".format(mesh_term))
+                return
+
+            date_to = entry["lastUpdate"]
+        else:
+            mesh_terms = [mesh_term]
+            date_to = datetime.datetime.now()
+        date_from = datetime.date(2020, 4, 24)  # TODO change this to datetime.date(1900, 1, 1)
+        harvester = HarvestEntrezWrapper(dataset_id, mesh_term, self._temp_dir, date_from, date_to, self._mongodb_host,
+                                         self._mongodb_port, self._mongodb_db_name)
+        harvester.run()
+        self._update_job_metadata(job_name, mesh_terms, date_to)
+
+        collections = dict()
+        for suffix in ["pmc", "pubmed", "pubmed_MeSH"]:
+            collection = "{dataset_id}_{date_to}_{date_from}_{suffix}".format(dataset_id=dataset_id,
+                                                                              date_to=date_to.strftime("%Y_%m_%d"),
+                                                                              date_from=date_from.strftime("%Y_%m_%d"),
+                                                                              suffix=suffix)
+
+            if self._mongodb_manager.collection_exists(collection):
+                if DEBUG:
+                    self._mongodb_manager.prune_collection(collection, 3)
+                collections[suffix] = collection
+
+        for collection_type in collections.keys():
+            self._set_basic_medknow_settings()
+            if collection_type == "pubmed_MeSH":
+                self._set_edge_specific_medknow_settings(collections[collection_type],
+                                                         job_name, "pubmed_MeSH")
+
+                self._run_medknow()
+
+
     def cleanup(self):
         self._mongodb_manager.on_exit()
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--harvest_literature", metavar='mesh_term',
+    parser.add_argument("--add_disease", metavar='mesh_term',
                         help="Retrieve online articles relevant to a MeSH term from PubMed and PMC")
     parser.add_argument("--harvest_go", metavar='path_to_obo',
                         help="Process the OBO file of gene ontology")
@@ -255,8 +296,8 @@ def main():
             disease_graph.update_obo(args.harvest_obo, "MESH")
         if args.harvest_drugbank:
             disease_graph.update_drugbank(args.harvest_drugbank)
-        if args.harvest_literature:
-            disease_graph.update_disease(args.harvest_literature)
+        if args.add_disease:
+            disease_graph.add_disease(args.add_disease)
     finally:
         disease_graph.cleanup()
 

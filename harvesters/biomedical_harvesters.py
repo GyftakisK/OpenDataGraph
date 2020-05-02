@@ -1,6 +1,5 @@
 import yaml
 import os
-import ntpath
 from utilities import run_jar, get_filename_from_file_path
 
 
@@ -81,7 +80,7 @@ class HarvestEntrezWrapper(HarvesterWrapper):
 
     def _get_settings(self):
         return {"baseFolder": self._base_folder, "date": self._dates, "meshTerms": self._mesh_terms,
-                "datesetId": self._dataset_id, "mongodb": self._mongo_config}
+                "datasetId": self._dataset_id, "mongodb": self._mongo_config}
 
     def _get_jar_arguments(self):
         return [self._settings_file]
