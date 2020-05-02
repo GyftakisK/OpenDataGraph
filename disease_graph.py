@@ -11,6 +11,7 @@ from db_manager.mongodb_manager import MongoDbManager
 from harvesters.biomedical_harvesters import HarvestEntrezWrapper, HarvestOBOWrapper, HarvestDrugBankWrapper
 from medknow.tasks import taskCoordinator
 from medknow.config import settings
+from utilities import get_filename_from_file_path
 
 
 DEBUG = True
@@ -56,11 +57,13 @@ class DiseaseGraph:
             available_cpus -= 1
         return available_cpus
 
-    def _update_job_metadata(self, job_name):
+    def _update_job_metadata(self, job_name, input_):
         if self._mongodb_manager.get_entry_from_field('metadata', "job", job_name):
             self._mongodb_manager.update_field('metadata', "job", job_name, 'lastUpdate', datetime.datetime.now())
+            self._mongodb_manager.update_field('metadata', "job", job_name, 'input', input_)
         else:
-            self._mongodb_manager.insert_entry('metadata', {"job": job_name, "lastUpdate": datetime.datetime.now()})
+            self._mongodb_manager.insert_entry('metadata', {"job": job_name, 'input': input_,
+                                                            "lastUpdate": datetime.datetime.now()})
 
     @staticmethod
     def _get_version():
@@ -172,7 +175,7 @@ class DiseaseGraph:
         harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
                                            job_name)
         harvester.run()
-        self._update_job_metadata(job_name)
+        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
         self._set_basic_medknow_settings()
         self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
         self._run_medknow()
@@ -183,7 +186,7 @@ class DiseaseGraph:
         harvester.run()
         job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
         self._mongodb_manager.rename_collection(harvester.input_obo_name, job_name)
-        self._update_job_metadata(job_name)
+        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
         self._set_basic_medknow_settings()
         self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
         self._run_medknow()
@@ -230,8 +233,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--harvest_literature", metavar='mesh_term',
                         help="Retrieve online articles relevant to a MeSH term from PubMed and PMC")
-    parser.add_argument("--harvest_obo", metavar='path_to_obo',
-                        help="Process the OBO file of biomedical ontologies")
+    parser.add_argument("--harvest_go", metavar='path_to_obo',
+                        help="Process the OBO file of gene ontology")
+    parser.add_argument("--harvest_do", metavar='path_to_obo',
+                        help="Process the OBO file of disease ontology")
+    parser.add_argument("--harvest_mesh", metavar='path_to_obo',
+                        help="Process the OBO file of MeSH terms ontology")
     parser.add_argument("--harvest_drugbank", metavar='path_to_xml',
                         help="Process the XML file of DrugBank")
     args = parser.parse_args()
@@ -240,7 +247,11 @@ def main():
 
     try:
         disease_graph.setup()
-        if args.harvest_obo:
+        if args.harvest_go:
+            disease_graph.update_obo(args.harvest_obo, "GO")
+        if args.harvest_do:
+            disease_graph.update_obo(args.harvest_obo, "DO")
+        if args.harvest_mesh:
             disease_graph.update_obo(args.harvest_obo, "MESH")
         if args.harvest_drugbank:
             disease_graph.update_drugbank(args.harvest_drugbank)
