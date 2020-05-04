@@ -191,40 +191,6 @@ class DiseaseGraph:
         self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
         self._run_medknow()
 
-    def update_disease(self, mesh_term):
-        dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
-        job_name = "{}_entrez".format(dataset_id)
-        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", job_name)
-        if entry:
-            last_update = entry["lastUpdate"]
-        else:
-            last_update = datetime.date(2020, 4, 24)
-        harvester = HarvestEntrezWrapper(dataset_id, mesh_term, self._temp_dir, last_update, self._mongodb_host,
-                                         self._mongodb_port, self._mongodb_db_name)
-        harvester.run()
-        collections = dict()
-        for suffix in ["pmc", "pubmed", "pubmed_MeSH"]:
-            current_name = "{dataset_id}_{suffix}".format(dataset_id=dataset_id, suffix=suffix)
-            new_name = "{cur_name}_{cur_date}_{last_update}".format(cur_name=current_name,
-                                                                    cur_date=datetime.datetime.now().strftime(
-                                                                        "%Y_%m_%d"),
-                                                                    last_update=last_update.strftime(
-                                                                        "%Y_%m_%d"))
-            if self._mongodb_manager.collection_exists(current_name):
-                self._mongodb_manager.rename_collection(current_name, new_name)
-                if DEBUG:
-                    self._mongodb_manager.prune_collection(new_name)
-            collections[suffix] = new_name
-        # self._update_job_metadata(job_name)
-
-        for collection_type in collections.keys():
-            self._set_basic_medknow_settings()
-            if collection_type == "pubmed_MeSH":
-                self._set_edge_specific_medknow_settings(collections[collection_type],
-                                                         job_name, "pubmed_MeSH")
-
-                self._run_medknow()
-
     def add_disease(self, mesh_term):
         dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
         job_name = "disease_literature"
@@ -234,12 +200,12 @@ class DiseaseGraph:
             if mesh_term in mesh_terms:
                 logging.error("MeSH TERM: {} already in DB".format(mesh_term))
                 return
-
+            mesh_terms.append(mesh_term)
             date_to = entry["lastUpdate"]
         else:
             mesh_terms = [mesh_term]
             date_to = datetime.datetime.now()
-        date_from = datetime.date(2020, 4, 24)  # TODO change this to datetime.date(1900, 1, 1)
+        date_from = datetime.date(1900, 1, 1)
         harvester = HarvestEntrezWrapper(dataset_id, mesh_term, self._temp_dir, date_from, date_to, self._mongodb_host,
                                          self._mongodb_port, self._mongodb_db_name)
         harvester.run()
@@ -254,20 +220,51 @@ class DiseaseGraph:
 
             if self._mongodb_manager.collection_exists(collection):
                 if DEBUG:
-                    self._mongodb_manager.prune_collection(collection, 3)
+                    if suffix == "pmc":
+                        self._mongodb_manager.prune_collection(collection, 1)
+                    else:
+                        self._mongodb_manager.prune_collection(collection, 10)
                 collections[suffix] = collection
 
         for collection_type in collections.keys():
             self._set_basic_medknow_settings()
             if collection_type == "pubmed_MeSH":
                 self._set_edge_specific_medknow_settings(collections[collection_type],
-                                                         job_name, "pubmed_MeSH")
+                                                         job_name, collection_type)
 
-                self._run_medknow()
+            if collection_type == "pubmed":
+                self._set_pubmed_medknow_settings(collections[collection_type],
+                                                  dataset_id, collection_type)
+            if collection_type == "pmc":
+                self._set_pubmed_medknow_settings(collections[collection_type],
+                                                  dataset_id, collection_type)
+
+            self._run_medknow()
 
 
     def cleanup(self):
         self._mongodb_manager.on_exit()
+
+    def _set_pubmed_medknow_settings(self, collection, resource, collection_type):
+        settings["pipeline"]["in"]["type"] = "text"
+        settings["pipeline"]["trans"]["semrep"] = True
+        settings["load"]["mongo"]["collection"] = collection
+        settings["load"]["mongo"]["file_path"] = "mongodb://{host}:{port}/{db}|{collection}".format(
+            host=self._mongodb_host,
+            port=self._mongodb_port,
+            db=self._mongodb_db_name,
+            collection=collection)
+        settings["load"]["text"]["itemfield"] = collection
+        settings["load"]["text"]["textfield"] = "abstractText" if collection_type == "pubmed" else "body_Filtered"
+        settings["load"]["text"]["idfield"] = "pmid"
+        settings["load"]["text"]["labelfield"] = "title"
+        settings["load"]["text"]["sent_prefix"] = "abstract" if collection_type == "pubmed" else "fullText"
+        settings["neo4j"]["resource"] = "{}_{}".format(resource, collection_type)
+        settings["out"]["json"]["itemfield"] = collection
+        settings["out"]["json"]["json_doc_field"] = "abstractText" if collection_type == "pubmed" else "body_Filtered"
+        settings["out"]["json"]["json_text_field"] = "text"
+        settings["out"]["json"]["json_id_field"] = "id"
+        settings["out"]["json"]["json_label_field"] = "title"
 
 
 def main():
@@ -289,11 +286,11 @@ def main():
     try:
         disease_graph.setup()
         if args.harvest_go:
-            disease_graph.update_obo(args.harvest_obo, "GO")
+            disease_graph.update_obo(args.harvest_go, "GO")
         if args.harvest_do:
-            disease_graph.update_obo(args.harvest_obo, "DO")
+            disease_graph.update_obo(args.harvest_do, "DO")
         if args.harvest_mesh:
-            disease_graph.update_obo(args.harvest_obo, "MESH")
+            disease_graph.update_obo(args.harvest_mesh, "MESH")
         if args.harvest_drugbank:
             disease_graph.update_drugbank(args.harvest_drugbank)
         if args.add_disease:
