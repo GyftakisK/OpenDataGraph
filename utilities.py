@@ -1,11 +1,16 @@
 import subprocess
 import ntpath
 
+
 class DiseaseGraphException(Exception):
     pass
 
 
 class CommandExecutionFailed(DiseaseGraphException):
+    pass
+
+
+class DiseaseAlreadyInGraph(DiseaseGraphException):
     pass
 
 

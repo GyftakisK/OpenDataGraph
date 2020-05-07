@@ -11,7 +11,7 @@ from db_manager.mongodb_manager import MongoDbManager
 from harvesters.biomedical_harvesters import HarvestEntrezWrapper, HarvestOBOWrapper, HarvestDrugBankWrapper
 from medknow.tasks import taskCoordinator
 from medknow.config import settings
-from utilities import get_filename_from_file_path
+from utilities import get_filename_from_file_path, DiseaseAlreadyInGraph
 
 
 DEBUG = True
@@ -31,6 +31,7 @@ class DiseaseGraph:
         self._neo4j_pass = config["neo4j"]["password"]
         self._umls_api_key = config["apis"]["umls"]
         self._mongodb_manager = None
+        self._literature_harvester_sources = ("pmc", "pubmed", "pubmed_MeSH")
 
     def setup(self):
         self._mongodb_manager = MongoDbManager(self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
@@ -64,6 +65,14 @@ class DiseaseGraph:
         else:
             self._mongodb_manager.insert_entry('metadata', {"job": job_name, 'input': input_,
                                                             "lastUpdate": last_update})
+
+    def _update_pmids(self, source, pmids):
+        entry = self._mongodb_manager.get_entry_from_field('pmid_cache', "source", source)
+        if entry:
+            self._mongodb_manager.update_field('pmid_cache', "source", source, 'pmids',
+                                               entry['pmids'] + pmids)
+        else:
+            self._mongodb_manager.insert_entry('pmid_cache', {"source": source, 'pmids': pmids})
 
     @staticmethod
     def _get_version():
@@ -191,6 +200,39 @@ class DiseaseGraph:
         self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
         self._run_medknow()
 
+    def _get_harvested_pubmed_collections(self, dataset_id, date_to, date_from):
+        collections = dict()
+        for suffix in self._literature_harvester_sources:
+            collection = "{dataset_id}_{date_to}_{date_from}_{suffix}".format(dataset_id=dataset_id,
+                                                                              date_to=date_to.strftime("%Y_%m_%d"),
+                                                                              date_from=date_from.strftime("%Y_%m_%d"),
+                                                                              suffix=suffix)
+
+            if self._mongodb_manager.collection_exists(collection):
+                collections[suffix] = collection
+        return collections
+
+    def _remove_already_harvester_pubmed_articles(self, available_collections_per_source):
+        pmids = dict()
+        for source in ["pmc", "pubmed"]:
+            if source not in available_collections_per_source:
+                continue
+            pmids[source] = self._get_pmids_from_collection(available_collections_per_source[source])
+            entry = self._mongodb_manager.get_entry_from_field('pmid_cache', "source", source)
+
+            if not entry:
+                continue
+
+            common_pmids = set(entry["pmids"]) & set(pmids[source])
+            for pmid in common_pmids:
+                self._mongodb_manager.delete_entry_from_field(available_collections_per_source[source],
+                                                              "pmid", pmid)
+                self._mongodb_manager.delete_entry_from_field(available_collections_per_source["pubmed_MeSH"],
+                                                              "s", pmid)
+                pmids[source].remove(pmid)
+                logging.debug("Removing already harvested article with pmid={}".format(pmid))
+        return pmids
+
     def add_disease(self, mesh_term):
         dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
         job_name = "disease_literature"
@@ -198,8 +240,7 @@ class DiseaseGraph:
         if entry:
             mesh_terms = entry["input"]
             if mesh_term in mesh_terms:
-                logging.error("MeSH TERM: {} already in DB".format(mesh_term))
-                return
+                raise DiseaseAlreadyInGraph("MeSH TERM: {} already in DB".format(mesh_term))
             mesh_terms.append(mesh_term)
             date_to = entry["lastUpdate"]
         else:
@@ -211,35 +252,29 @@ class DiseaseGraph:
         harvester.run()
         self._update_job_metadata(job_name, mesh_terms, date_to)
 
-        collections = dict()
-        for suffix in ["pmc", "pubmed", "pubmed_MeSH"]:
-            collection = "{dataset_id}_{date_to}_{date_from}_{suffix}".format(dataset_id=dataset_id,
-                                                                              date_to=date_to.strftime("%Y_%m_%d"),
-                                                                              date_from=date_from.strftime("%Y_%m_%d"),
-                                                                              suffix=suffix)
+        available_collections_per_source = self._get_harvested_pubmed_collections(dataset_id,
+                                                                                  date_to,
+                                                                                  date_from)
 
-            if self._mongodb_manager.collection_exists(collection):
-                if DEBUG:
-                    if suffix == "pmc":
+        harvested_pmids = self._remove_already_harvester_pubmed_articles(available_collections_per_source)
+
+        if DEBUG:
+            for source, collection in available_collections_per_source.items():
+                    if source == "pmc":
                         self._mongodb_manager.prune_collection(collection, 1)
                     else:
                         self._mongodb_manager.prune_collection(collection, 10)
-                collections[suffix] = collection
 
-        for collection_type in collections.keys():
+        for source, collection in available_collections_per_source.items():
             self._set_basic_medknow_settings()
-            if collection_type == "pubmed_MeSH":
-                self._set_edge_specific_medknow_settings(collections[collection_type],
-                                                         job_name, collection_type)
-
-            if collection_type == "pubmed":
-                self._set_pubmed_medknow_settings(collections[collection_type],
-                                                  dataset_id, collection_type)
-            if collection_type == "pmc":
-                self._set_pubmed_medknow_settings(collections[collection_type],
-                                                  dataset_id, collection_type)
+            if source == "pubmed_MeSH":
+                self._set_edge_specific_medknow_settings(collection, job_name, source)
+            else:
+                self._set_pubmed_medknow_settings(collection, dataset_id, source)
 
             self._run_medknow()
+            if source != "pubmed_MeSH":
+                self._update_pmids(source, harvested_pmids[source])
 
 
     def cleanup(self):
@@ -265,6 +300,9 @@ class DiseaseGraph:
         settings["out"]["json"]["json_text_field"] = "text"
         settings["out"]["json"]["json_id_field"] = "id"
         settings["out"]["json"]["json_label_field"] = "title"
+
+    def _get_pmids_from_collection(self, collection):
+        return self._mongodb_manager.get_distinct_field_values(collection, "pmid")
 
 
 def main():
@@ -300,4 +338,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        if DEBUG:
+            raise
+        print(e)
+        exit(1)
+    exit(0)

@@ -27,12 +27,18 @@ class MongoDbManager:
     def get_entry_from_field(self, collection, field_name, field_value):
         return self._mongodb_inst[collection].find_one({field_name: field_value})
 
+    def delete_entry_from_field(self, collection, key_name, key_value):
+        self._mongodb_inst[collection].delete_many({key_name: key_value})
+
     def insert_entry(self, collection, entry):
         self._mongodb_inst[collection].insert_one(entry)
 
     def update_field(self, collection, key_name, key_value, field_name, new_value):
         self._mongodb_inst[collection].find_and_modify(query={key_name: key_value},
                                                        update={"$set": {field_name: new_value}})
+
+    def get_distinct_field_values(self, collection, field_name):
+        return self._mongodb_inst[collection].distinct(field_name)
 
     def on_exit(self):
         self._mongo_client.close()
