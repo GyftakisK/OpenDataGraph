@@ -11,14 +11,33 @@ from db_manager.mongodb_manager import MongoDbManager
 from harvesters.biomedical_harvesters import HarvestEntrezWrapper, HarvestOBOWrapper, HarvestDrugBankWrapper
 from medknow.tasks import taskCoordinator
 from medknow.config import settings
-from utilities import get_filename_from_file_path, DiseaseAlreadyInGraph
+from utilities import get_filename_from_file_path, DiseaseAlreadyInGraph, NoDiseasesInGraph, NotSupportedOboFile
 
 
 DEBUG = True
 
 
 class DiseaseGraph:
-    def __init__(self, settings_file="config.ini"):
+    def __init__(self):
+        self._mongodb_host = None
+        self._mongodb_port = None
+        self._mongodb_db_name = None
+        self._temp_dir = None
+        self._semrep_bin_dir = None
+        self._neo4j_host = None
+        self._neo4j_port = None
+        self._neo4j_user = None
+        self._neo4j_pass = None
+        self._umls_api_key = None
+        self._mongodb_manager = None
+        self._supported_obo_types = ['DO', 'GO', 'MESH']
+        self._literature_harvester_sources = ("pmc", "pubmed", "pubmed_MeSH")
+
+    def setup(self, settings_file="config.ini"):
+        """
+        Method to setup basic functionality.
+        Must be called before any other functions
+        """
         config = self._read_config(settings_file)
         self._mongodb_host = config["mongoDB"]["host"]
         self._mongodb_port = int(config["mongoDB"]["port"])
@@ -30,25 +49,100 @@ class DiseaseGraph:
         self._neo4j_user = config["neo4j"]["user"]
         self._neo4j_pass = config["neo4j"]["password"]
         self._umls_api_key = config["apis"]["umls"]
-        self._mongodb_manager = None
-        self._literature_harvester_sources = ("pmc", "pubmed", "pubmed_MeSH")
-
-    def setup(self):
         self._mongodb_manager = MongoDbManager(self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
         logging.basicConfig(level=logging.DEBUG,
                             format="%(asctime)s - %(message)s",
                             handlers=[logging.FileHandler(os.path.join(self._temp_dir, "temp.log")),
                                       logging.StreamHandler()])
 
+    def update_drugbank(self, path_to_file: str):
+        """
+        Method to harvest drugbank XML file and insert relations to graph
+        :param path_to_file: Path to XML
+        """
+        version = self._get_version()
+        job_name = "drugbank_{}".format(version)
+        harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
+                                           job_name)
+        harvester.run()
+        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
+        self._set_basic_medknow_settings()
+        self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
+        self._run_medknow()
+
+    def update_obo(self, path_to_file: str, obo_type: str):
+        """
+        Method to harvest ontology files and insert relations to graph
+        :param path_to_file: Path to OBO file
+        :param obo_type: Type of OBO file. Supported types: [GO, DO, MESH]
+        """
+        if obo_type not in self._supported_obo_types:
+            raise NotSupportedOboFile(obo_type)
+        version = self._get_version()
+        harvester = HarvestOBOWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
+        harvester.run()
+        job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
+        self._mongodb_manager.rename_collection(harvester.input_obo_name, job_name)
+        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
+        self._set_basic_medknow_settings()
+        self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
+        self._run_medknow()
+
+    def add_disease(self, mesh_term: str):
+        """
+        Method to harvest literature concerning a disease from provided MeSH term,
+        extract relations from text and insert them to graph
+        :param mesh_term: Disease MeSH term
+        """
+        job_name = "disease_literature"
+        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", job_name)
+        if entry:
+            mesh_terms = entry["input"]
+            if mesh_term in mesh_terms:
+                raise DiseaseAlreadyInGraph("MeSH TERM: {} already in DB".format(mesh_term))
+            mesh_terms.append(mesh_term)
+            date_to = entry["lastUpdate"]
+        else:
+            mesh_terms = [mesh_term]
+            date_to = datetime.datetime.now()
+        date_from = datetime.date(1900, 1, 1)
+        self._update_literature(self._get_dataset_id_from_mesh_term(mesh_term),
+                                date_from, date_to, job_name, mesh_terms, mesh_term)
+
+    def update_diseases(self):
+        """
+        Method to update literature concerning diseases already available in the graph
+        """
+        job_name = "disease_literature"
+        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", job_name)
+        if entry:
+            mesh_terms = entry["input"]
+            date_from = entry["lastUpdate"]
+        else:
+            raise NoDiseasesInGraph()
+        date_to = datetime.datetime.now()
+        self._update_literature("update", date_from, date_to, job_name, mesh_terms, mesh_terms)
+
+    def cleanup(self):
+        """
+        Method to be called before exit
+        """
+        self._mongodb_manager.on_exit()
+
     @staticmethod
-    def _read_config(settings_file):
+    def _read_config(settings_file: str) -> configparser.ConfigParser:
+        """
+        Method to read configuration file
+        :param settings_file: Path to settings file
+        :return: current configuration
+        """
         config = configparser.ConfigParser()
         with open(settings_file, 'r') as f:
             config.read_file(f)
         return config
 
     @staticmethod
-    def _get_num_of_cores():
+    def _get_num_of_cores() -> int:
         """
         Get number of available cpu cores (leave one core for other jobs)
         :return: number of available cpu cores
@@ -58,7 +152,14 @@ class DiseaseGraph:
             available_cpus -= 1
         return available_cpus
 
-    def _update_job_metadata(self, job_name, input_, last_update=datetime.datetime.now()):
+    def _update_job_metadata(self, job_name: str, input_,
+                             last_update=datetime.datetime.now()):
+        """
+        Method to update job metadata in mongoDb
+        :param job_name: The name of the job for which we want to write metadata
+        :param input_: The input of the job
+        :param last_update: Timestamp of the last update
+        """
         if self._mongodb_manager.get_entry_from_field('metadata', "job", job_name):
             self._mongodb_manager.update_field('metadata', "job", job_name, 'lastUpdate', last_update)
             self._mongodb_manager.update_field('metadata', "job", job_name, 'input', input_)
@@ -74,8 +175,16 @@ class DiseaseGraph:
         else:
             self._mongodb_manager.insert_entry('pmid_cache', {"source": source, 'pmids': pmids})
 
+    def _get_pmids_from_collection(self, collection: str) -> list:
+        """
+        Helper method to get all unique pmid in an article mongoDb collection
+        :param collection: Name of the collection
+        :return: List of pmids
+        """
+        return self._mongodb_manager.get_distinct_field_values(collection, "pmid")
+
     @staticmethod
-    def _get_version():
+    def _get_version() -> str:
         """
         Get data version (currently harvesting date)
         :return: string representing data version
@@ -83,6 +192,9 @@ class DiseaseGraph:
         return datetime.datetime.now().strftime("%Y_%m_%d")
 
     def _set_basic_medknow_settings(self):
+        """
+        Method to set basic common settings for Medknow, needed for all jobs
+        """
         # PIPELINE
         settings['pipeline']['in']['source'] = "mongo"
         settings['pipeline']['in']['type'] = None
@@ -144,13 +256,10 @@ class DiseaseGraph:
         settings["out"]["neo4j"]["out_path"] = "{host}:{port}".format(host=self._neo4j_host,
                                                                       port=self._neo4j_port)
 
-    @staticmethod
-    def _run_medknow():
-        task_manager = taskCoordinator()
-        task_manager.print_pipeline()
-        task_manager.run()
-
-    def _set_edge_specific_medknow_settings(self, collection, resource, job_type):
+    def _set_edge_specific_medknow_settings(self, collection: str, resource: str, job_type: str):
+        """
+        Method to set settings for Medknow, needed for edge insertion jobs
+        """
         settings_from_type = {"DO": {"sub": {"source": "UMLS", "type": "Entity"},
                                      "obj": {"source": "UMLS", "type": "Entity"}},
                               "GO": {"sub": {"source": "GO", "type": "Entity"},
@@ -178,109 +287,13 @@ class DiseaseGraph:
         settings["neo4j"]["resource"] = resource
         settings["out"]["json"]["itemfield"] = job_type
 
-    def update_drugbank(self, path_to_file):
-        version = self._get_version()
-        job_name = "drugbank_{}".format(version)
-        harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
-                                           job_name)
-        harvester.run()
-        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
-        self._set_basic_medknow_settings()
-        self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
-        self._run_medknow()
-
-    def update_obo(self, path_to_file, obo_type):
-        version = self._get_version()
-        harvester = HarvestOBOWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
-        harvester.run()
-        job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
-        self._mongodb_manager.rename_collection(harvester.input_obo_name, job_name)
-        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
-        self._set_basic_medknow_settings()
-        self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
-        self._run_medknow()
-
-    def _get_harvested_pubmed_collections(self, dataset_id, date_to, date_from):
-        collections = dict()
-        for suffix in self._literature_harvester_sources:
-            collection = "{dataset_id}_{date_to}_{date_from}_{suffix}".format(dataset_id=dataset_id,
-                                                                              date_to=date_to.strftime("%Y_%m_%d"),
-                                                                              date_from=date_from.strftime("%Y_%m_%d"),
-                                                                              suffix=suffix)
-
-            if self._mongodb_manager.collection_exists(collection):
-                collections[suffix] = collection
-        return collections
-
-    def _remove_already_harvester_pubmed_articles(self, available_collections_per_source):
-        pmids = dict()
-        for source in ["pmc", "pubmed"]:
-            if source not in available_collections_per_source:
-                continue
-            pmids[source] = self._get_pmids_from_collection(available_collections_per_source[source])
-            entry = self._mongodb_manager.get_entry_from_field('pmid_cache', "source", source)
-
-            if not entry:
-                continue
-
-            common_pmids = set(entry["pmids"]) & set(pmids[source])
-            for pmid in common_pmids:
-                self._mongodb_manager.delete_entry_from_field(available_collections_per_source[source],
-                                                              "pmid", pmid)
-                self._mongodb_manager.delete_entry_from_field(available_collections_per_source["pubmed_MeSH"],
-                                                              "s", pmid)
-                pmids[source].remove(pmid)
-                logging.debug("Removing already harvested article with pmid={}".format(pmid))
-        return pmids
-
-    def add_disease(self, mesh_term):
-        dataset_id = ''.join([word[0].upper() for word in mesh_term.split()])
-        job_name = "disease_literature"
-        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", job_name)
-        if entry:
-            mesh_terms = entry["input"]
-            if mesh_term in mesh_terms:
-                raise DiseaseAlreadyInGraph("MeSH TERM: {} already in DB".format(mesh_term))
-            mesh_terms.append(mesh_term)
-            date_to = entry["lastUpdate"]
-        else:
-            mesh_terms = [mesh_term]
-            date_to = datetime.datetime.now()
-        date_from = datetime.date(1900, 1, 1)
-        harvester = HarvestEntrezWrapper(dataset_id, mesh_term, self._temp_dir, date_from, date_to, self._mongodb_host,
-                                         self._mongodb_port, self._mongodb_db_name)
-        harvester.run()
-        self._update_job_metadata(job_name, mesh_terms, date_to)
-
-        available_collections_per_source = self._get_harvested_pubmed_collections(dataset_id,
-                                                                                  date_to,
-                                                                                  date_from)
-
-        harvested_pmids = self._remove_already_harvester_pubmed_articles(available_collections_per_source)
-
-        if DEBUG:
-            for source, collection in available_collections_per_source.items():
-                    if source == "pmc":
-                        self._mongodb_manager.prune_collection(collection, 1)
-                    else:
-                        self._mongodb_manager.prune_collection(collection, 10)
-
-        for source, collection in available_collections_per_source.items():
-            self._set_basic_medknow_settings()
-            if source == "pubmed_MeSH":
-                self._set_edge_specific_medknow_settings(collection, job_name, source)
-            else:
-                self._set_pubmed_medknow_settings(collection, dataset_id, source)
-
-            self._run_medknow()
-            if source != "pubmed_MeSH":
-                self._update_pmids(source, harvested_pmids[source])
-
-
-    def cleanup(self):
-        self._mongodb_manager.on_exit()
-
-    def _set_pubmed_medknow_settings(self, collection, resource, collection_type):
+    def _set_pubmed_medknow_settings(self, collection: str, resource: str, collection_type: str):
+        """
+        Method to set settings for Medknow, needed for literature (PubMed) relations extraction
+        :param collection: Name of the mongo collection to be used as input
+        :param resource: Name of the resource field of edges, used for data provenance
+        :param collection_type: Type of the collection being processed. Supported values ["pubmed", "pmc"]
+        """
         settings["pipeline"]["in"]["type"] = "text"
         settings["pipeline"]["trans"]["semrep"] = True
         settings["load"]["mongo"]["collection"] = collection
@@ -301,8 +314,105 @@ class DiseaseGraph:
         settings["out"]["json"]["json_id_field"] = "id"
         settings["out"]["json"]["json_label_field"] = "title"
 
-    def _get_pmids_from_collection(self, collection):
-        return self._mongodb_manager.get_distinct_field_values(collection, "pmid")
+    @staticmethod
+    def _run_medknow():
+        """
+        Helper method to run Medknow
+        """
+        task_manager = taskCoordinator()
+        task_manager.print_pipeline()
+        task_manager.run()
+
+    def _get_harvested_pubmed_collections(self, dataset_id: str, date_to: datetime.datetime,
+                                          date_from: datetime.datetime) -> dict:
+        """
+        Helper method to get created collections in mongoDb as a result of literature harvesting
+        :param dataset_id: Dataset ID provided to harvester
+        :param date_to: Timestamp denoting the ending completion date of articles
+        :param date_from: Timestamp denoting the starting completion date of articles
+        :return: Available collections per source
+        """
+        collections = dict()
+        for suffix in self._literature_harvester_sources:
+            collection = "{dataset_id}_{date_to}_{date_from}_{suffix}".format(dataset_id=dataset_id,
+                                                                              date_to=date_to.strftime("%Y_%m_%d"),
+                                                                              date_from=date_from.strftime("%Y_%m_%d"),
+                                                                              suffix=suffix)
+
+            if self._mongodb_manager.collection_exists(collection):
+                collections[suffix] = collection
+        return collections
+
+    def _remove_already_harvested_pubmed_articles(self, available_collections_per_source: dict) -> dict:
+        """
+        Helper method to remove articles that are already present in the graph
+        :param available_collections_per_source:
+        :return: New article pmids harvested per source
+        """
+        pmids = dict()
+        for source in ["pmc", "pubmed"]:
+            if source not in available_collections_per_source:
+                continue
+            pmids[source] = self._get_pmids_from_collection(available_collections_per_source[source])
+            entry = self._mongodb_manager.get_entry_from_field('pmid_cache', "source", source)
+
+            if not entry:
+                continue
+
+            common_pmids = set(entry["pmids"]) & set(pmids[source])
+            for pmid in common_pmids:
+                self._mongodb_manager.delete_entry_from_field(available_collections_per_source[source],
+                                                              "pmid", pmid)
+                self._mongodb_manager.delete_entry_from_field(available_collections_per_source["pubmed_MeSH"],
+                                                              "s", pmid)
+                pmids[source].remove(pmid)
+                logging.debug("Removing already harvested article with pmid={}".format(pmid))
+        return pmids
+
+    @staticmethod
+    def _get_dataset_id_from_mesh_term(mesh_term: str) -> str:
+        """
+        Helper method to create dataset ID from provided MeSH term
+        :param mesh_term:
+        :return: Words contained in MeSH term divided with underscores
+        """
+        dataset_id = "_".join(mesh_term.replace(",", "").replace("-", "_").split())
+        return dataset_id.lower()
+
+    def _update_literature(self, dataset_id, date_from, date_to, job_name, mesh_terms, terms_to_harvest):
+        """
+        Helper method to harvest literature and update graph
+        :param dataset_id: Dataset ID provided to harvester
+        :param date_to: Timestamp denoting the ending completion date of articles
+        :param date_from: Timestamp denoting the starting completion date of articles
+        :param job_name: Name of the job
+        :param mesh_terms: MeSH terms to be harvested
+        :param terms_to_harvest: All mesh_terms previously harvested
+        """
+        harvester = HarvestEntrezWrapper(dataset_id, terms_to_harvest, self._temp_dir, date_from, date_to,
+                                         self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
+        harvester.run()
+        self._update_job_metadata(job_name, mesh_terms, date_to)
+        available_collections_per_source = self._get_harvested_pubmed_collections(dataset_id,
+                                                                                  date_to,
+                                                                                  date_from)
+        harvested_pmids = self._remove_already_harvested_pubmed_articles(available_collections_per_source)
+        if DEBUG:
+            for source, collection in available_collections_per_source.items():
+                if source == "pmc":
+                    self._mongodb_manager.prune_collection(collection, 1)
+                else:
+                    self._mongodb_manager.prune_collection(collection, 10)
+        for source, collection in available_collections_per_source.items():
+            self._set_basic_medknow_settings()
+            if source == "pubmed_MeSH":
+                self._set_edge_specific_medknow_settings(collection, job_name, source)
+            else:
+                self._set_pubmed_medknow_settings(collection, dataset_id, source)
+
+            self._run_medknow()
+            if source != "pubmed_MeSH":
+                self._update_pmids(source, harvested_pmids[source])
 
 
 def main():
@@ -317,6 +427,9 @@ def main():
                         help="Process the OBO file of MeSH terms ontology")
     parser.add_argument("--harvest_drugbank", metavar='path_to_xml',
                         help="Process the XML file of DrugBank")
+    parser.add_argument("--update_diseases", action='store_true',
+                        help="Update diseases already in DB")
+
     args = parser.parse_args()
 
     disease_graph = DiseaseGraph()
@@ -333,6 +446,8 @@ def main():
             disease_graph.update_drugbank(args.harvest_drugbank)
         if args.add_disease:
             disease_graph.add_disease(args.add_disease)
+        if args.update_diseases:
+            disease_graph.update_diseases()
     finally:
         disease_graph.cleanup()
 

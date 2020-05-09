@@ -14,7 +14,17 @@ class DiseaseAlreadyInGraph(DiseaseGraphException):
     pass
 
 
-def run_jar(jar_name,  args=()):
+class NoDiseasesInGraph(DiseaseGraphException):
+    def __init__(self):
+        super(NoDiseasesInGraph, self).__init__("Graph is empty")
+
+
+class NotSupportedOboFile(DiseaseGraphException):
+    def __init__(self, obo_type: str):
+        super(NotSupportedOboFile, self).__init__("Not supported OBO type: {}".format(obo_type))
+
+
+def run_jar(jar_name: str,  args: tuple = ()):
     """
     Utility function to run a JAR
     :param jar_name: name of the JAR to be run
@@ -31,7 +41,7 @@ def run_jar(jar_name,  args=()):
     return result.stdout
 
 
-def get_filename_from_file_path(path):
+def get_filename_from_file_path(path: str):
     """
     Utility function to get filename from path
     :param path: Path to file
