@@ -2,4 +2,14 @@
 {% import 'bootstrap/wtf.html' as wtf %}
 
 {% block app_content %}
+    <h1>Admin dashboard</h1>
+    <h2>Update graph from structured sources</h2>
+    <div class="row">
+        <div class="col-xs-6">
+            {{ wtf.quick_form(form_drugbank) }}
+        </div>
+        <div class="col-xs-6">
+            {{ wtf.quick_form(form_obo) }}
+        </div>
+    </div>
 {% endblock %}

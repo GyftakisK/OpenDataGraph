@@ -2,10 +2,8 @@
 
 {% block app_content %}
     <h1>Admin dashboard</h1>
-    <ul>
-        <li><a href="{{ url_for('admin.literature') }}">Update graph from literature</a></li>
-        <li><a href="{{ url_for('admin.structured') }}">Update graph from structured sources</a></li>
-    </ul>
+    <h2><a href="{{ url_for('admin.literature') }}">Update graph from literature</a></h2>
+    <h2><a href="{{ url_for('admin.structured') }}">Update graph from structured sources</a></h2>
 {% endblock %}
 
 
