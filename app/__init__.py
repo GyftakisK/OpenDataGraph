@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_bootstrap import Bootstrap
+from flask_mail import Mail
 
 
 db = SQLAlchemy()
@@ -14,6 +15,7 @@ migrate = Migrate()
 login = LoginManager()
 login.login_view = 'admin.login'
 bootstrap = Bootstrap()
+mail = Mail()
 
 
 def create_app(config_class=Config):
@@ -23,6 +25,7 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     login.init_app(app)
+    mail.init_app(app)
     bootstrap.init_app(app)
 
     from app.admin import bp as admin_bp
