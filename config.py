@@ -13,3 +13,9 @@ class Config(object):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME')
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD')
     ADMINS = ['gyftakiskon@gmail.com']
+    BROKER_URL = 'mongodb://{host}:{port}/{db_name}'.format(host=os.environ.get('MONGODB_HOST'),
+                                                            port=os.environ.get('MONGODB_PORT'),
+                                                            db_name=os.environ.get('MONGODB_NAME'))
+    CELERY_RESULT_BACKEND = 'mongodb://{host}:{port}/{db_name}'.format(host=os.environ.get('MONGODB_HOST'),
+                                                                       port=os.environ.get('MONGODB_PORT'),
+                                                                       db_name=os.environ.get('MONGODB_NAME'))

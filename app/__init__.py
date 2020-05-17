@@ -8,6 +8,8 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
+from celery import Celery
+from .celery_utils import init_celery
 
 
 db = SQLAlchemy()
@@ -16,6 +18,9 @@ login = LoginManager()
 login.login_view = 'admin.login'
 bootstrap = Bootstrap()
 mail = Mail()
+celery = Celery(__name__,
+                backend=Config.CELERY_RESULT_BACKEND,
+                broker=Config.BROKER_URL)
 
 
 def create_app(config_class=Config):
@@ -27,6 +32,7 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
     bootstrap.init_app(app)
+    init_celery(celery, app)
 
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')
@@ -70,6 +76,9 @@ def create_app(config_class=Config):
         app.logger.info('DiseaseGraph startup')
 
     return app
+
+
+
 
 
 from app import models
