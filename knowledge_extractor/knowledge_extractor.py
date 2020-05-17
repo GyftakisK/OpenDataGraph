@@ -9,7 +9,7 @@ from harvesters.biomedical_harvesters import HarvestDrugBankWrapper, HarvestOBOW
 from medknow.config import settings
 from medknow.tasks import taskCoordinator
 from utilities import get_filename_from_file_path, NotSupportedOboFile, DiseaseAlreadyInGraph, NoDiseasesInGraph
-
+from typing import List, Dict
 DEBUG = True
 
 
@@ -124,6 +124,42 @@ class KnowledgeExtractor:
         Method to be called before exit
         """
         self._mongodb_manager.on_exit()
+
+    def get_literature_status(self) -> dict:
+        """
+        Method to retrieve metadata for literature harvesting
+        :return: Dictionary containing MeSH terms and last update timestamp
+        """
+        job_name = "disease_literature"
+        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", job_name)
+        if entry:
+            return {"mesh_terms": entry["input"], "last_update": entry["lastUpdate"]}
+        else:
+            return {"mesh_terms": None, "last_update": None}
+
+    def get_structured_resources_jobs_status(self) -> List[Dict]:
+        """
+        Method to retrieve metadata for structured (OBO, DRUGBANK) harvesting
+        :return: List of dictionaries containing filenames and timestamps
+        """
+        return [{"filename": entry["input"], "last_update": entry["lastUpdate"]}
+                for entry in self._mongodb_manager.get_all_entries('metadata')
+                if entry['job'] != "disease_literature"]
+
+    def print_job_status(self):
+        """
+        Method to print a job status report
+        """
+        print("STATUS")
+        print("=" * 50)
+        literature = self.get_literature_status()
+        print("MeSH Terms Harvested: {}".format(literature["mesh_terms"]))
+        print("Last Update: {}".format(literature["last_update"]))
+        print("-" * 50)
+        for structured in self.get_structured_resources_jobs_status():
+            print("Filename: {}".format(structured["filename"]))
+            print("Last Update: {}".format(structured["last_update"]))
+            print("-" * 50)
 
     @staticmethod
     def _read_config(settings_file: str) -> configparser.ConfigParser:

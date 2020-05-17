@@ -27,6 +27,9 @@ class MongoDbManager:
     def get_entry_from_field(self, collection, field_name, field_value):
         return self._mongodb_inst[collection].find_one({field_name: field_value})
 
+    def get_all_entries(self, collection):
+        return self._mongodb_inst[collection].find({})
+
     def delete_entry_from_field(self, collection, key_name, key_value):
         self._mongodb_inst[collection].delete_many({key_name: key_value})
 

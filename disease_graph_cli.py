@@ -19,6 +19,8 @@ def main():
                         help="Process the XML file of DrugBank")
     parser.add_argument("--update_diseases", action='store_true',
                         help="Update diseases already in DB")
+    parser.add_argument("--print_status", action='store_true',
+                        help="Print a job status report")
 
     args = parser.parse_args()
 
@@ -38,6 +40,8 @@ def main():
             extractor.add_disease(args.add_disease)
         if args.update_diseases:
             extractor.update_diseases()
+        if args.print_status:
+            extractor.print_job_status()
     finally:
         extractor.cleanup()
 
