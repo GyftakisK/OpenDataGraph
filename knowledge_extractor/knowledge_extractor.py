@@ -100,7 +100,7 @@ class KnowledgeExtractor:
             date_to = entry["lastUpdate"]
         else:
             mesh_terms = [mesh_term]
-            date_to = datetime.datetime.now()
+            date_to = datetime.datetime.utcnow()
         date_from = datetime.date(1900, 1, 1)
         self._update_literature(self._get_dataset_id_from_mesh_term(mesh_term),
                                 date_from, date_to, job_name, mesh_terms, mesh_term)
@@ -116,7 +116,7 @@ class KnowledgeExtractor:
             date_from = entry["lastUpdate"]
         else:
             raise NoDiseasesInGraph()
-        date_to = datetime.datetime.now()
+        date_to = datetime.datetime.utcnow()
         self._update_literature("update", date_from, date_to, job_name, mesh_terms, mesh_terms)
 
     def cleanup(self):
@@ -185,7 +185,7 @@ class KnowledgeExtractor:
         return available_cpus
 
     def _update_job_metadata(self, job_name: str, input_,
-                             last_update=datetime.datetime.now()):
+                             last_update=datetime.datetime.utcnow()):
         """
         Method to update job metadata in mongoDb
         :param job_name: The name of the job for which we want to write metadata
@@ -221,7 +221,7 @@ class KnowledgeExtractor:
         Get data version (currently harvesting date)
         :return: string representing data version
         """
-        return datetime.datetime.now().strftime("%Y_%m_%d")
+        return datetime.datetime.utcnow().strftime("%Y_%m_%d")
 
     def _set_basic_medknow_settings(self):
         """
