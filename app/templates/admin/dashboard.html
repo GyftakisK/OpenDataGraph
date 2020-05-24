@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
 
 {% block app_content %}
     <h1>Admin dashboard</h1>
@@ -8,7 +9,7 @@
             <div class="col-md-6">
                 <div class="panel panel-primary">
                     <div class="panel-heading"><h3>Literature</h3></div>
-                    <div class="panel-body">
+                    <div id="literature_panel_body" class="panel-body">
                         <table class="table">
                             <tr>
                                 <th>Diseases in graph</th>
@@ -20,19 +21,25 @@
                             {% endfor %}
                         </table>
                         <p>Last update: {{ moment(last_update).format('LLL') }} ({{ moment(last_update).fromNow() }})</p>
-                        <button type="button" class="btn btn-default btn-lg">
-                          <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add disease
+                        <button id="add_disease" type="button" class="btn btn-default btn-lg"
+                                data-toggle="collapse" data-target="#add_disease_form"
+                                aria-expanded="false" aria-controls="add_disease_form">
+                          <span class="glyphicon glyphicon-plus"></span> Add disease
                         </button>
-                        <button type="button" class="btn btn-default btn-lg">
-                          <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+                        <button id="update_literature_btn" type="button" class="btn btn-default btn-lg">
+                            <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
                         </button>
+                        <div id="add_disease_form"  class="collapse multi-collapse">
+                            <br>
+                            {{ wtf.quick_form(form_literature) }}
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
                 <div class="panel panel-primary">
                     <div class="panel-heading"><h3>Structured resources</h3></div>
-                    <div class="panel-body">
+                    <div id="struct_panel_body" class="panel-body">
                         <table class="table">
                             <tr>
                                 <th>Resource Filename</th>
@@ -45,19 +52,54 @@
                             </tr>
                             {% endfor %}
                         </table>
-                        <button type="button" class="btn btn-default btn-lg">
-                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add resource
+                        <button id="add_resource" type="button" class="btn btn-default btn-lg"
+                                data-toggle="collapse" data-target="#add_resource_forms"
+                                aria-expanded="false" aria-controls="add_resource_forms">
+                            <span class="glyphicon glyphicon-plus"></span> Add resource
                         </button>
+                        <div id="add_resource_forms" class="collapse multi-collapse">
+                            <br>
+                            {{ wtf.quick_form(form_drugbank) }}
+                            <br>
+                            <p><strong>OR</strong></p>
+                            <br>
+                            {{ wtf.quick_form(form_obo) }}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
-
-    <h2><a href="{{ url_for('admin.literature') }}">Update graph from literature</a></h2>
-    <h2><a href="{{ url_for('admin.structured') }}">Update graph from structured sources</a></h2>
 {% endblock %}
 
+{% block scripts %}
+{{ super() }}
+    <script type=text/javascript>
 
+        const updateLiteratureBtn = $('#update_literature_btn');
+        // const addDiseaseBtn = $('#add_disease');
+        // const addResourceBtn = $('#add_resource');
+
+        function update_literature() {
+            updateLiteratureBtn.html('<img src="{{ url_for('static', filename='loading.gif') }}">');
+            $.post("{{ url_for('admin.update_literature') }}", function(data) {
+                console.log(data);
+                let old_button = '<span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update';
+                $('#update_literature_btn').html(old_button);
+                $('#content').prepend('<div class="alert alert-info" role="alert">' + data.message + '</div>')
+            });
+        }
+        updateLiteratureBtn.click(update_literature);
+        // function show_hide_element(element) {
+        //     let x = document.getElementById(element);
+        //     if (x.style.display === "none") {
+        //         x.style.display = "block";
+        //     } else {
+        //         x.style.display = "none";
+        //     }
+        // }
+        // addDiseaseBtn.click(function () {show_hide_element("add_disease_form")});
+        // addResourceBtn.click(function () {show_hide_element("add_resource_forms")});
+    </script>
+{% endblock %}
 

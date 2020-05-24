@@ -36,7 +36,7 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container">
+    <div id="content" class="container">
         {% with messages = get_flashed_messages() %}
         {% if messages %}
             {% for message in messages %}
@@ -52,5 +52,6 @@
 
 {% block scripts %}
 {{ super() }}
+{{ moment.include_jquery() }}
 {{ moment.include_moment() }}
 {% endblock %}
