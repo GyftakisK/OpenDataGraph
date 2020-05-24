@@ -2,13 +2,20 @@ from app.admin import bp
 from flask import render_template, flash, redirect, url_for
 from app.admin.forms import LiteratureForm, StructuredDrugbankForm, StructuredOboForm
 from flask_login import login_required
+from app import extractor
 
 
 @bp.route('/')
 @bp.route('/dashboard')
 @login_required
 def admin():
-    return render_template('admin/dashboard.html')
+    literature_status = extractor.get_literature_status()
+    structured_status = extractor.get_structured_resources_jobs_status()
+    return render_template('admin/dashboard.html',
+                           title="Admin dashboard",
+                           mesh_terms=literature_status["mesh_terms"],
+                           last_update=literature_status["last_update"],
+                           structured_resources=structured_status)
 
 
 @bp.route('literature', methods=['GET', 'POST'])

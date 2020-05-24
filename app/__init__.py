@@ -8,8 +8,10 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from flask_bootstrap import Bootstrap
 from flask_mail import Mail
+from flask_moment import Moment
 from celery import Celery
 from .celery_utils import init_celery
+from knowledge_extractor.knowledge_extractor import KnowledgeExtractor
 
 
 db = SQLAlchemy()
@@ -21,6 +23,8 @@ mail = Mail()
 celery = Celery(__name__,
                 backend=Config.CELERY_RESULT_BACKEND,
                 broker=Config.BROKER_URL)
+moment = Moment()
+extractor = KnowledgeExtractor()
 
 
 def create_app(config_class=Config):
@@ -33,6 +37,8 @@ def create_app(config_class=Config):
     mail.init_app(app)
     bootstrap.init_app(app)
     init_celery(celery, app)
+    moment.init_app(app)
+    extractor.setup()
 
     from app.admin import bp as admin_bp
     app.register_blueprint(admin_bp, url_prefix='/admin')

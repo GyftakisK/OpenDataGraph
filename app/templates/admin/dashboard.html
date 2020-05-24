@@ -2,6 +2,59 @@
 
 {% block app_content %}
     <h1>Admin dashboard</h1>
+    <div>
+        <h2>Status</h2>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading"><h3>Literature</h3></div>
+                    <div class="panel-body">
+                        <table class="table">
+                            <tr>
+                                <th>Diseases in graph</th>
+                            </tr>
+                            {% for mesh in mesh_terms %}
+                            <tr>
+                                <td>{{mesh}}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <p>Last update: {{ moment(last_update).format('LLL') }} ({{ moment(last_update).fromNow() }})</p>
+                        <button type="button" class="btn btn-default btn-lg">
+                          <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add disease
+                        </button>
+                        <button type="button" class="btn btn-default btn-lg">
+                          <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-primary">
+                    <div class="panel-heading"><h3>Structured resources</h3></div>
+                    <div class="panel-body">
+                        <table class="table">
+                            <tr>
+                                <th>Resource Filename</th>
+                                <th>Added on</th>
+                            </tr>
+                            {% for struct in structured_resources %}
+                            <tr>
+                                <td>{{struct['filename']}}</td>
+                                <td>{{ moment(struct['last_update']).format('LLL') }} ({{ moment(struct['last_update']).fromNow() }})</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <button type="button" class="btn btn-default btn-lg">
+                            <span class="glyphicon glyphicon-plus" aria-hidden="true"></span> Add resource
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <h2><a href="{{ url_for('admin.literature') }}">Update graph from literature</a></h2>
     <h2><a href="{{ url_for('admin.structured') }}">Update graph from structured sources</a></h2>
 {% endblock %}
