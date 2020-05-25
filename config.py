@@ -19,3 +19,6 @@ class Config(object):
     CELERY_RESULT_BACKEND = 'mongodb://{host}:{port}/{db_name}'.format(host=os.environ.get('MONGODB_HOST'),
                                                                        port=os.environ.get('MONGODB_PORT'),
                                                                        db_name=os.environ.get('MONGODB_NAME'))
+    UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER')
+    MAX_CONTENT_PATH = 1024 * 1024 * 1024 * 10  # 10GB
+

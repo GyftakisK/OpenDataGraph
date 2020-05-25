@@ -6,3 +6,4 @@ export MAIL_PORT=8025
 export MONGODB_HOST='127.0.0.1'
 export MONGODB_PORT=27017
 export MONGODB_NAME=DiseaseGraph
+export UPLOAD_FOLDER='/tmp/'
