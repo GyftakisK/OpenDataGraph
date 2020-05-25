@@ -61,10 +61,10 @@ class KnowledgeExtractor:
         harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
                                            job_name)
         harvester.run()
-        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
         self._set_basic_medknow_settings()
         self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
         self._run_medknow()
+        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
 
     def update_obo(self, path_to_file: str, obo_type: str):
         """
@@ -79,10 +79,10 @@ class KnowledgeExtractor:
         harvester.run()
         job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
         self._mongodb_manager.rename_collection(harvester.input_obo_name, job_name)
-        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
         self._set_basic_medknow_settings()
         self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
         self._run_medknow()
+        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
 
     def add_disease(self, mesh_term: str):
         """
@@ -231,7 +231,7 @@ class KnowledgeExtractor:
         settings['pipeline']['in']['source'] = "mongo"
         settings['pipeline']['in']['type'] = None
         settings['pipeline']['in']['stream'] = False
-        settings['pipeline']['in']['parallel'] = True
+        settings['pipeline']['in']['parallel'] = False
         settings['pipeline']['trans']['metamap'] = False
         settings['pipeline']['trans']['reverb'] = False
         settings['pipeline']['trans']['semrep'] = False
@@ -424,7 +424,6 @@ class KnowledgeExtractor:
         harvester = HarvestEntrezWrapper(dataset_id, terms_to_harvest, self._temp_dir, date_from, date_to,
                                          self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
         harvester.run()
-        self._update_job_metadata(job_name, mesh_terms, date_to)
         available_collections_per_source = self._get_harvested_pubmed_collections(dataset_id,
                                                                                   date_to,
                                                                                   date_from)
@@ -445,3 +444,5 @@ class KnowledgeExtractor:
             self._run_medknow()
             if source != "pubmed_MeSH":
                 self._update_pmids(source, harvested_pmids[source])
+
+        self._update_job_metadata(job_name, mesh_terms, date_to)
