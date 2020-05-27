@@ -51,13 +51,15 @@ class KnowledgeExtractor:
                             handlers=[logging.FileHandler(os.path.join(self._temp_dir, "temp.log")),
                                       logging.StreamHandler()])
 
-    def update_drugbank(self, path_to_file: str):
+    def update_drugbank(self, path_to_file: str, version: str = None):
         """
         Method to harvest drugbank XML file and insert relations to graph
         :param path_to_file: Path to XML
+        :param version: The version of the XML file
         """
-        version = self._get_version()
-        job_name = "drugbank_{}".format(version)
+        if not version:
+            version = self._get_version()
+        job_name = "DRUGBANK_{}".format(version)
         harvester = HarvestDrugBankWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name,
                                            job_name)
         harvester.run()
@@ -66,18 +68,20 @@ class KnowledgeExtractor:
         self._run_medknow()
         self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
 
-    def update_obo(self, path_to_file: str, obo_type: str):
+    def update_obo(self, path_to_file: str, obo_type: str, version: str = None):
         """
         Method to harvest ontology files and insert relations to graph
         :param path_to_file: Path to OBO file
         :param obo_type: Type of OBO file. Supported types: [GO, DO, MESH]
+        :param version: The version of the OBO file
         """
         if obo_type not in self._supported_obo_types:
             raise NotSupportedOboFile(obo_type)
-        version = self._get_version()
+        if not version:
+            version = self._get_version()
         harvester = HarvestOBOWrapper(path_to_file, self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
         harvester.run()
-        job_name = "{name}_obo_{version}".format(name=harvester.input_obo_name, version=version)
+        job_name = "{obo_type}_{version}".format(obo_type=obo_type, version=version)
         self._mongodb_manager.rename_collection(harvester.input_obo_name, job_name)
         self._set_basic_medknow_settings()
         self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
