@@ -47,11 +47,15 @@
                     <div id="struct_panel_body" class="panel-body">
                         <table class="table">
                             <tr>
-                                <th>Resource Filename</th>
+                                <th>Type</th>
+                                <th>Version</th>
+                                <th>Filename</th>
                                 <th>Added on</th>
                             </tr>
                             {% for struct in structured_resources %}
                             <tr>
+                                <td>{{struct['type']}}</td>
+                                <td>{{struct['version']}}</td>
                                 <td>{{struct['filename']}}</td>
                                 <td>{{ moment(struct['last_update']).format('LLL') }} ({{ moment(struct['last_update']).fromNow() }})</td>
                             </tr>

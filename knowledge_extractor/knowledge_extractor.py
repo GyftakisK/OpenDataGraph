@@ -148,7 +148,10 @@ class KnowledgeExtractor:
         Method to retrieve metadata for structured (OBO, DRUGBANK) harvesting
         :return: List of dictionaries containing filenames and timestamps
         """
-        return [{"filename": entry["input"], "last_update": entry["lastUpdate"]}
+        return [{"filename": entry["input"]["filename"],
+                 "type": entry["input"]["type"],
+                 "version": entry["input"]["version"],
+                 "last_update": entry["lastUpdate"]}
                 for entry in self._mongodb_manager.get_all_entries('metadata')
                 if entry['job'] != "disease_literature"]
 
