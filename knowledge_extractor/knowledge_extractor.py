@@ -66,7 +66,8 @@ class KnowledgeExtractor:
         self._set_basic_medknow_settings()
         self._set_edge_specific_medknow_settings(job_name, job_name, "DRUGBANK")
         self._run_medknow()
-        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
+        metadata_input = {'filename': get_filename_from_file_path(path_to_file), "type": "DRUGBANK", "version": version}
+        self._update_job_metadata(job_name, metadata_input)
 
     def update_obo(self, path_to_file: str, obo_type: str, version: str = None):
         """
@@ -86,7 +87,8 @@ class KnowledgeExtractor:
         self._set_basic_medknow_settings()
         self._set_edge_specific_medknow_settings(job_name, job_name, obo_type)
         self._run_medknow()
-        self._update_job_metadata(job_name, get_filename_from_file_path(path_to_file))
+        metadata_input = {'filename': get_filename_from_file_path(path_to_file), "type": obo_type, "version": version}
+        self._update_job_metadata(job_name, metadata_input)
 
     def add_disease(self, mesh_term: str):
         """
