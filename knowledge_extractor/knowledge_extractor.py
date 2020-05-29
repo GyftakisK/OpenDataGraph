@@ -139,7 +139,7 @@ class KnowledgeExtractor:
         if entry:
             return {"mesh_terms": entry["input"], "last_update": entry["lastUpdate"]}
         else:
-            return {"mesh_terms": None, "last_update": None}
+            return {"mesh_terms": [], "last_update": None}
 
     def get_structured_resources_jobs_status(self) -> List[Dict]:
         """
