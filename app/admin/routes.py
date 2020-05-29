@@ -5,7 +5,7 @@ from app.admin.forms import LiteratureForm, StructuredDrugbankForm, StructuredOb
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 from app import extractor
-from app.tasks import add_disease_task, update_literature_task, add_drugbank_task
+from app.tasks import add_disease_task, update_literature_task, add_drugbank_task, add_obo_task
 
 
 @bp.route('/', methods=['GET', 'POST'])
@@ -16,8 +16,8 @@ def admin():
     structured_status = extractor.get_structured_resources_jobs_status()
     form_literature = LiteratureForm()
     if form_literature.submit1.data and form_literature.validate():
-        add_disease_task.apply_async(form_literature.mesh_term.data)
-        flash('Job created for "{}"'.format(form_literature.mesh_term.data))
+        task = add_disease_task.apply_async([form_literature.mesh_term.data])
+        flash('Job {} created for "{}"'.format(task.task_id, form_literature.mesh_term.data))
         return redirect(url_for("admin.admin"))
 
     form_drugbank = StructuredDrugbankForm()
@@ -26,14 +26,19 @@ def admin():
         filename = secure_filename(f.filename)
         filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
         f.save(filepath)
-        add_drugbank_task.apply_async([filepath])
-        flash('Job created for "{}"'.format(f.filename))
+        task = add_drugbank_task.apply_async([filepath, form_drugbank.version.data])
+        flash('Job {} created for "{}"'.format(task.task_id, f.filename))
         return redirect(url_for("admin.admin"))
 
     form_obo = StructuredOboForm()
     if form_obo.submit3.data and form_obo.validate():
         f = form_obo.obo_file.data
-        flash('Job created for "{}"'.format(f.filename))
+        filename = secure_filename(f.filename)
+        filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
+        f.save(filepath)
+        obo_type = dict(form_obo.obo_type.choices).get(form_obo.obo_type.data)
+        task = add_obo_task.apply_async([filepath, obo_type, form_obo.version.data])
+        flash('Job {} created for "{}"'.format(task.task_id, f.filename))
         return redirect(url_for("admin.admin"))
 
     return render_template('admin/dashboard.html',

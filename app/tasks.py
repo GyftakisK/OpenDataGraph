@@ -15,12 +15,12 @@ def add_disease_task(mesh_term):
 
 
 @celery.task
-def add_drugbank_task(filename):
+def add_drugbank_task(filename, version):
     with current_app.app_context():
-        extractor.update_drugbank(filename)
+        extractor.update_drugbank(filename, version=version)
 
 
 @celery.task
-def add_obo_task(obo_type, filename):
+def add_obo_task(filename, obo_type, version):
     with current_app.app_context():
-        extractor.update_obo(filename, obo_type)
+        extractor.update_obo(filename, obo_type, version=version)

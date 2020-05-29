@@ -20,7 +20,12 @@
                             </tr>
                             {% endfor %}
                         </table>
-                        <p>Last update: {{ moment(last_update).format('LLL') }} ({{ moment(last_update).fromNow() }})</p>
+                        {% if last_update %}
+                        <p class="pull-right"><strong>Last update: {{ moment(last_update).format('LLL') }} ({{ moment(last_update).fromNow() }})</strong></p>
+                        {% else %}
+                        <p class="pull-right"><strong>Last update: Never</strong></p>
+                        {% endif %}
+                        <br>
                         <button id="add_disease" type="button" class="btn btn-default btn-lg"
                                 data-toggle="collapse" data-target="#add_disease_form"
                                 aria-expanded="false" aria-controls="add_disease_form">

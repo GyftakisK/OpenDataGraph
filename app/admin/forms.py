@@ -10,12 +10,14 @@ class LiteratureForm(FlaskForm):
 
 
 class StructuredDrugbankForm(FlaskForm):
-    xml_file = FileField(validators=[FileRequired()])
+    xml_file = FileField('Drugbank XML file', validators=[FileRequired()])
+    version = StringField('Version', validators=[DataRequired()])
     submit2 = SubmitField('Add to graph')
 
 
 class StructuredOboForm(FlaskForm):
-    obo_file = FileField(validators=[FileRequired()])
+    obo_file = FileField('OBO file', validators=[FileRequired()])
+    version = StringField('Version', validators=[DataRequired()])
     obo_type = SelectField('OBO type', choices=(('do', 'DO'), ('go', 'GO'), ('mesh', 'MeSH')),
                            validators=[DataRequired()])
     submit3 = SubmitField('Add to graph')
