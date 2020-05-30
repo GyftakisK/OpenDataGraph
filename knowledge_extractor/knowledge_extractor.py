@@ -26,7 +26,7 @@ class KnowledgeExtractor:
         self._neo4j_pass = None
         self._umls_api_key = None
         self._mongodb_manager = None
-        self._supported_obo_types = ['DO', 'GO', 'MESH']
+        self._supported_obo_types = ['DO', 'GO', 'MeSH']
         self._literature_harvester_sources = ("pmc", "pubmed", "pubmed_MeSH")
 
     def setup(self, settings_file="config.ini"):
@@ -73,7 +73,7 @@ class KnowledgeExtractor:
         """
         Method to harvest ontology files and insert relations to graph
         :param path_to_file: Path to OBO file
-        :param obo_type: Type of OBO file. Supported types: [GO, DO, MESH]
+        :param obo_type: Type of OBO file. Supported types: [GO, DO, MeSH]
         :param version: The version of the OBO file
         """
         if obo_type not in self._supported_obo_types:
@@ -240,7 +240,7 @@ class KnowledgeExtractor:
         settings['pipeline']['in']['source'] = "mongo"
         settings['pipeline']['in']['type'] = None
         settings['pipeline']['in']['stream'] = False
-        settings['pipeline']['in']['parallel'] = False
+        settings['pipeline']['in']['parallel'] = True
         settings['pipeline']['trans']['metamap'] = False
         settings['pipeline']['trans']['reverb'] = False
         settings['pipeline']['trans']['semrep'] = False
@@ -305,7 +305,7 @@ class KnowledgeExtractor:
                                      "obj": {"source": "UMLS", "type": "Entity"}},
                               "GO": {"sub": {"source": "GO", "type": "Entity"},
                                      "obj": {"source": "GO", "type": "Entity"}},
-                              "MESH": {"sub": {"source": "MSH", "type": "Entity"},
+                              "MeSH": {"sub": {"source": "MSH", "type": "Entity"},
                                        "obj": {"source": "MSH", "type": "Entity"}},
                               "DRUGBANK": {"sub": {"source": "DRUGBANK", "type": "Entity"},
                                            "obj": {"source": "DRUGBANK", "type": "Entity"}},
