@@ -95,7 +95,7 @@
                 console.log(data);
                 let old_button = '<span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update';
                 $('#update_literature_btn').html(old_button);
-                $('#content').prepend('<div class="alert alert-info" role="alert">' + data.message + '</div>')
+                $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
             });
         }
         updateLiteratureBtn.click(update_literature);

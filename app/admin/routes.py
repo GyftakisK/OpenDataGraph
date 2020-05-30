@@ -1,11 +1,12 @@
 import os
 from app.admin import bp
-from flask import render_template, flash, redirect, url_for, jsonify, current_app
+from flask import render_template, redirect, url_for, jsonify, current_app
 from app.admin.forms import LiteratureForm, StructuredDrugbankForm, StructuredOboForm
 from flask_login import login_required
 from werkzeug.utils import secure_filename
 from app import extractor
 from app.tasks import add_disease_task, update_literature_task, add_drugbank_task, add_obo_task
+from app.utilities import flash_error, flash_success
 
 
 @bp.route('/', methods=['GET', 'POST'])
@@ -18,10 +19,10 @@ def admin():
     if form_literature.submit1.data and form_literature.validate():
         mesh_term = form_literature.mesh_term.data
         if mesh_term in literature_status["mesh_terms"]:
-            flash('Disease with MeSH term {} already in graph'.format(mesh_term))
+            flash_error('Disease with MeSH term {} already in graph'.format(mesh_term))
             return redirect(url_for("admin.admin"))
         task = add_disease_task.apply_async([mesh_term])
-        flash('Job {} created for "{}"'.format(task.task_id, mesh_term))
+        flash_error('Job {} created for "{}"'.format(task.task_id, mesh_term))
         return redirect(url_for("admin.admin"))
 
     form_drugbank = StructuredDrugbankForm()
@@ -31,12 +32,12 @@ def admin():
         version = form_drugbank.version.data
         if version in [resource["version"] for resource in structured_status
                        if resource["type"] == "DRUGBANK"]:
-            flash('Drugbank XML with version {} already in graph'.format(version))
+            flash_error('Drugbank XML with version {} already in graph'.format(version))
             return redirect(url_for("admin.admin"))
         filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
         f.save(filepath)
         task = add_drugbank_task.apply_async([filepath, version])
-        flash('Job {} created for "{}"'.format(task.task_id, f.filename))
+        flash_success('Job {} created for "{}"'.format(task.task_id, f.filename))
         return redirect(url_for("admin.admin"))
 
     form_obo = StructuredOboForm()
@@ -46,14 +47,14 @@ def admin():
         version = form_obo.version.data
         if version in [resource["version"] for resource in structured_status
                        if resource["type"] == obo_type]:
-            flash('OBO of type {} with version {} already in graph'.format(obo_type,
-                                                                           version))
+            flash_error('OBO of type {} with version {} already in graph'.format(obo_type,
+                                                                                 version))
             return redirect(url_for("admin.admin"))
         filename = secure_filename(f.filename)
         filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
         f.save(filepath)
         task = add_obo_task.apply_async([filepath, obo_type, version])
-        flash('Job {} created for "{}"'.format(task.task_id, f.filename))
+        flash_success('Job {} created for "{}"'.format(task.task_id, f.filename))
         return redirect(url_for("admin.admin"))
 
     return render_template('admin/dashboard.html',
