@@ -1,6 +1,7 @@
 from time import time
+from datetime import datetime
 import jwt
-from app import db, login
+from app import db, login, celery
 from flask import current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -47,3 +48,34 @@ class User(UserMixin, db.Model):
         except:
             return
         return User.query.get(_id)
+
+
+class Task(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.String(36), index=True, unique=True)
+    task_name = db.Column(db.String(30))
+    task_inputs = db.Column(db.String(200))
+    creator = db.Column(db.Integer)
+    status = db.Column(db.String(12))
+    added_on = db.Column(db.DATETIME)
+
+    def __init__(self, task_id, task_name, task_inputs, user_id):
+        super(Task, self).__init__()
+        self.task_id = task_id
+        self.task_name = task_name
+        self.task_inputs = task_inputs
+        self.creator = user_id
+        self.status = ""
+        self.added_on = datetime.utcnow()
+
+    def __repr__(self):
+        return '<Task {} Status: {}>'.format(self.task_id, self.status)
+
+    def get_status(self) -> str:
+        if not self.status or self.status not in ['SUCCESS', 'FAILURE']:
+            self.status = celery.AsyncResult(self.task_id).state
+            db.session.commit()
+        return self.status
+
+    def get_creator_email(self) -> str:
+        return User.query.get(self.creator).email

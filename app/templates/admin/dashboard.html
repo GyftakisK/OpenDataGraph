@@ -5,7 +5,7 @@
     <h1>Admin dashboard</h1>
     <div>
         <h2>Status</h2>
-        <div class="row">
+        <div id="resource-status" class="row">
             <div class="col-md-6">
                 <div class="panel panel-primary">
                     <div class="panel-heading"><h3>Literature</h3></div>
@@ -26,14 +26,16 @@
                         <p class="pull-right"><strong>Last update: Never</strong></p>
                         {% endif %}
                         <br>
-                        <button id="add_disease" type="button" class="btn btn-default btn-lg"
-                                data-toggle="collapse" data-target="#add_disease_form"
-                                aria-expanded="false" aria-controls="add_disease_form">
-                          <span class="glyphicon glyphicon-plus"></span> Add disease
-                        </button>
-                        <button id="update_literature_btn" type="button" class="btn btn-default btn-lg">
-                            <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
-                        </button>
+                        <div class="btn-group">
+                            <button id="add_disease" type="button" class="btn btn-default btn-lg"
+                                    data-toggle="collapse" data-target="#add_disease_form"
+                                    aria-expanded="false" aria-controls="add_disease_form">
+                              <span class="glyphicon glyphicon-plus"></span> Add disease
+                            </button>
+                            <button id="update_literature_btn" type="button" class="btn btn-default btn-lg">
+                                <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+                            </button>
+                        </div>
                         <div id="add_disease_form"  class="collapse multi-collapse">
                             <br>
                             {{ wtf.quick_form(form_literature) }}
@@ -78,6 +80,37 @@
                 </div>
             </div>
         </div>
+        <div id="job-status" class="row" >
+            <div class="col-md-12">
+                <div class="panel panel-primary">
+                    <div class="panel-heading"><h3>Jobs</h3></div>
+                    <div class="panel-body">
+                        <table id="job-status-table" class="table">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Inputs</th>
+                                <th>Status</th>
+                                <th>Added on</th>
+                                <th>By</th>
+                            </tr>
+                            {% for job in jobs %}
+                            <tr>
+                                <td>{{job['task_id']}}</td>
+                                <td>{{job['task_name']}}</td>
+                                <td>{{job['task_inputs']}}</td>
+                                <td>{{job['status']}}</td>
+                                <td>{{ moment(job['added_on']).format('LLL') }} ({{ moment(job['added_on']).fromNow() }})</td>
+                                <td>{{job['user_email']}}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                        <br>
+                        <a href="{{ url_for('admin.monitor_jobs') }}" class="btn btn-primary stretched-link pull-right">See all</a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}
 
@@ -92,23 +125,14 @@
         function update_literature() {
             updateLiteratureBtn.html('<img src="{{ url_for('static', filename='loading.gif') }}">');
             $.post("{{ url_for('admin.update_literature') }}", function(data) {
-                console.log(data);
                 let old_button = '<span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update';
                 $('#update_literature_btn').html(old_button);
                 $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
             });
         }
         updateLiteratureBtn.click(update_literature);
-        // function show_hide_element(element) {
-        //     let x = document.getElementById(element);
-        //     if (x.style.display === "none") {
-        //         x.style.display = "block";
-        //     } else {
-        //         x.style.display = "none";
-        //     }
-        // }
-        // addDiseaseBtn.click(function () {show_hide_element("add_disease_form")});
-        // addResourceBtn.click(function () {show_hide_element("add_resource_forms")});
+
+
     </script>
 {% endblock %}
 

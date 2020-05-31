@@ -2,11 +2,19 @@ import os
 from app.admin import bp
 from flask import render_template, redirect, url_for, jsonify, current_app
 from app.admin.forms import LiteratureForm, StructuredDrugbankForm, StructuredOboForm
-from flask_login import login_required
+from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from app import extractor
+from app import extractor, db
 from app.tasks import add_disease_task, update_literature_task, add_drugbank_task, add_obo_task
 from app.utilities import flash_error, flash_success
+from app.models import Task, User
+
+
+def save_task(task_id, task_name, task_inputs):
+    task = Task(task_id=task_id, task_name=task_name,
+                task_inputs=task_inputs, user_id=current_user.id)
+    db.session.add(task)
+    db.session.commit()
 
 
 @bp.route('/', methods=['GET', 'POST'])
@@ -22,6 +30,7 @@ def admin():
             flash_error('Disease with MeSH term {} already in graph'.format(mesh_term))
             return redirect(url_for("admin.admin"))
         task = add_disease_task.apply_async([mesh_term])
+        save_task(task.task_id, "add_disease_task", str({"mesh_term": mesh_term}))
         flash_error('Job {} created for "{}"'.format(task.task_id, mesh_term))
         return redirect(url_for("admin.admin"))
 
@@ -37,6 +46,8 @@ def admin():
         filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
         f.save(filepath)
         task = add_drugbank_task.apply_async([filepath, version])
+        save_task(task.task_id, "add_drugbank_task",
+                  str({"filename": filename, "version": version}))
         flash_success('Job {} created for "{}"'.format(task.task_id, f.filename))
         return redirect(url_for("admin.admin"))
 
@@ -54,8 +65,18 @@ def admin():
         filepath = os.path.join(current_app.config["UPLOAD_FOLDER"], filename)
         f.save(filepath)
         task = add_obo_task.apply_async([filepath, obo_type, version])
+        save_task(task.task_id, "add_obo_task",
+                  str({"filename": filename, "type": obo_type, "version": version}))
         flash_success('Job {} created for "{}"'.format(task.task_id, f.filename))
         return redirect(url_for("admin.admin"))
+
+    tasks = Task.query.filter(Task.status.notin_(['SUCCESS', 'FAILURE'])).all()
+    jobs = [{'task_id': task.task_id,
+             'task_name': task.task_name,
+             'task_inputs': task.task_inputs,
+             'added_on': task.added_on,
+             'user_email': task.get_creator_email(),
+             'status': task.get_status()} for task in tasks]
 
     return render_template('admin/dashboard.html',
                            title="Admin dashboard",
@@ -64,12 +85,29 @@ def admin():
                            structured_resources=structured_status,
                            form_literature=form_literature,
                            form_drugbank=form_drugbank,
-                           form_obo=form_obo)
+                           form_obo=form_obo,
+                           jobs=jobs)
 
 
 @bp.route('update_literature', methods=['POST'])
 @login_required
 def update_literature():
-    update_literature_task.apply_async()
-    return jsonify({'message': 'Job created for literature update'})
+    task = update_literature_task.apply_async()
+    save_task(task.task_id, "update_literature_task",
+              "")
+    return jsonify({'message': 'Job {} created for literature update'.format(task.task_id)})
 
+
+@bp.route('monitor_jobs', methods=['GET'])
+@login_required
+def monitor_jobs():
+    tasks = Task.query.all()
+    jobs = [{'task_id': task.task_id,
+             'task_name': task.task_name,
+             'task_inputs': task.task_inputs,
+             'added_on': task.added_on,
+             'user_email': task.get_creator_email(),
+             'status': task.get_status()} for task in tasks]
+    return render_template('admin/monitor_jobs.html',
+                           title="Monitor Jobs",
+                           jobs=reversed(jobs))

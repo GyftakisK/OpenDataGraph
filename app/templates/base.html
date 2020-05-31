@@ -58,7 +58,7 @@
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
 {{ moment.include_jquery() }}
 {{ moment.include_moment() }}
+{{ super() }}
 {% endblock %}

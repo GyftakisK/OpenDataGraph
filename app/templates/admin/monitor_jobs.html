@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block app_content %}
+    <h1>Job monitor</h1>
+    <div>
+        <h2>Status</h2>
+        <div id="job-status" class="row" >
+            <div class="col-md-12">
+                <div class="panel panel-primary">
+                    <div class="panel-heading"><h3>Jobs</h3></div>
+                    <div class="panel-body">
+                        <table id="job-status-table" class="table">
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Added on</th>
+                                <th>By</th>
+                            </tr>
+                            {% for job in jobs %}
+                            <tr data-toggle="tooltip"
+                                data-html="true"
+                                data-placement="bottom"
+                                title="<p><b> Inputs: </b> {{ job['task_inputs'] }}</p>">
+                                <td>{{job['task_id']}}</td>
+                                <td>{{job['task_name']}}</td>
+                                <td><strong>{{job['status']}}</strong></td>
+                                <td>{{ moment(job['added_on']).format('LLL') }} ({{ moment(job['added_on']).fromNow() }})</td>
+                                <td>{{job['user_email']}}</td>
+                            </tr>
+                            {% endfor %}
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+$(document).ready(function(){
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
+{% endblock %}
