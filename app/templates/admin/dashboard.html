@@ -85,25 +85,38 @@
                 <div class="panel panel-primary">
                     <div class="panel-heading"><h3>Jobs</h3></div>
                     <div class="panel-body">
-                        <table id="job-status-table" class="table">
-                            <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Inputs</th>
-                                <th>Status</th>
-                                <th>Added on</th>
-                                <th>By</th>
-                            </tr>
-                            {% for job in jobs %}
-                            <tr>
-                                <td>{{job['task_id']}}</td>
-                                <td>{{job['task_name']}}</td>
-                                <td>{{job['task_inputs']}}</td>
-                                <td>{{job['status']}}</td>
-                                <td>{{ moment(job['added_on']).format('LLL') }} ({{ moment(job['added_on']).fromNow() }})</td>
-                                <td>{{job['user_email']}}</td>
-                            </tr>
-                            {% endfor %}
+                        <table id="job-status-table" class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Status</th>
+                                    <th>Added on</th>
+                                    <th>By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for job in jobs %}
+                                <tr data-toggle="tooltip"
+                                    data-html="true"
+                                    data-placement="bottom"
+                                    title="<p><b> Inputs: </b> {{ job['task_inputs'] }}</p>">
+                                    <td>{{job['task_id']}}</td>
+                                    <td>{{job['task_name']}}</td>
+                                    {% if job['status'] == "SUCCESS" %}
+                                    <td style="background: #0f590d; color: #0c0c0c">
+                                    {% elif job['status'] == "FAILURE" %}
+                                    <td style="background: #9C1A1C; color: #0c0c0c">
+                                    {% else %}
+                                    <td style="background: #df8505; color: #0c0c0c">
+                                    {% endif %}
+                                        <strong>{{job['status']}}</strong>
+                                    </td>
+                                    <td>{{ moment(job['added_on']).format('LLL') }} ({{ moment(job['added_on']).fromNow() }})</td>
+                                    <td>{{job['user_email']}}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
                         </table>
                         <br>
                         <a href="{{ url_for('admin.monitor_jobs') }}" class="btn btn-primary stretched-link pull-right">See all</a>
@@ -131,7 +144,9 @@
             });
         }
         updateLiteratureBtn.click(update_literature);
-
+        $(document).ready(function(){
+            $('[data-toggle="tooltip"]').tooltip();
+        });
 
     </script>
 {% endblock %}
