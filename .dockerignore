@@ -1,0 +1,6 @@
+.git
+.gitignore
+app.db
+venv
+env_development.sh
+start_celery_worker.sh
