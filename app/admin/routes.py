@@ -31,7 +31,7 @@ def admin():
             return redirect(url_for("admin.admin"))
         task = add_disease_task.apply_async([mesh_term])
         save_task(task.task_id, "add_disease_task", str({"mesh_term": mesh_term}))
-        flash_error('Job {} created for "{}"'.format(task.task_id, mesh_term))
+        flash_success('Job {} created for "{}"'.format(task.task_id, mesh_term))
         return redirect(url_for("admin.admin"))
 
     form_drugbank = StructuredDrugbankForm()
