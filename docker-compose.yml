@@ -6,9 +6,12 @@ services:
       - "5000:5000"
     env_file:
       - ./.env
-  mongo:
-    image: mongo
+    depends_on:
+      - mongodb
+  mongodb:
+    image: mongo:latest
     restart: always
-    environment:
-        MONGO_INITDB_ROOT_USERNAME: root
-        MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - data-volume:/data/db
+volumes:
+    data-volume:
