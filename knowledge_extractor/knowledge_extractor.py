@@ -28,28 +28,26 @@ class KnowledgeExtractor:
         self._mongodb_manager = None
         self._supported_obo_types = ['DO', 'GO', 'MeSH']
         self._literature_harvester_sources = ("pmc", "pubmed", "pubmed_MeSH")
+        logging.basicConfig(level=logging.DEBUG,
+                            format="%(asctime)s - %(message)s",
+                            handlers=[logging.StreamHandler()])
 
-    def setup(self, settings_file="config.ini"):
+    def setup(self):
         """
         Method to setup basic functionality.
         Must be called before any other functions
         """
-        config = self._read_config(settings_file)
-        self._mongodb_host = config["mongoDB"]["host"]
-        self._mongodb_port = int(config["mongoDB"]["port"])
-        self._mongodb_db_name = config["mongoDB"]["db_name"]
-        self._temp_dir = config["filesystem"]["temp_dir"]
-        self._semrep_bin_dir = config["filesystem"]["semrep_bin_dir"]
-        self._neo4j_host = config["neo4j"]["host"]
-        self._neo4j_port = config["neo4j"]["port"]
-        self._neo4j_user = config["neo4j"]["user"]
-        self._neo4j_pass = config["neo4j"]["password"]
-        self._umls_api_key = config["apis"]["umls"]
+        self._mongodb_host = os.environ.get('MONGODB_HOST')
+        self._mongodb_port = int(os.environ.get('MONGODB_PORT'))
+        self._mongodb_db_name = os.environ.get('MONGODB_NAME')
+        self._temp_dir = os.environ.get('UPLOAD_FOLDER')
+        self._semrep_bin_dir = os.environ.get('SEMREP_BIN_DIR')
+        self._neo4j_host = os.environ.get('NEO4J_HOST')
+        self._neo4j_port = os.environ.get('NEO4J_PORT')
+        self._neo4j_user = os.environ.get('NEO4J_USER')
+        self._neo4j_pass = os.environ.get('NEO4J_PASS')
+        self._umls_api_key = os.environ.get('UMLS_API_KEY')
         self._mongodb_manager = MongoDbManager(self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
-        logging.basicConfig(level=logging.DEBUG,
-                            format="%(asctime)s - %(message)s",
-                            handlers=[logging.FileHandler(os.path.join(self._temp_dir, "temp.log")),
-                                      logging.StreamHandler()])
 
     def update_drugbank(self, path_to_file: str, version: str = None):
         """
@@ -169,18 +167,6 @@ class KnowledgeExtractor:
             print("Filename: {}".format(structured["filename"]))
             print("Last Update: {}".format(structured["last_update"]))
             print("-" * 50)
-
-    @staticmethod
-    def _read_config(settings_file: str) -> configparser.ConfigParser:
-        """
-        Method to read configuration file
-        :param settings_file: Path to settings file
-        :return: current configuration
-        """
-        config = configparser.ConfigParser()
-        with open(settings_file, 'r') as f:
-            config.read_file(f)
-        return config
 
     @staticmethod
     def _get_num_of_cores() -> int:
