@@ -30,7 +30,7 @@ COPY db_manager db_manager
 COPY harvesters harvesters
 COPY knowledge_extractor knowledge_extractor
 COPY medknow medknow
-COPY boot.sh celery_worker.py config.ini config.py disease_graph_run_app.py utilities.py ./
+COPY boot.sh celery_worker.py config.py disease_graph_run_app.py utilities.py ./
 
 RUN chown -R openDataGraph:openDataGraph ./
 RUN chmod +x boot.sh

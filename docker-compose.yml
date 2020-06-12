@@ -6,12 +6,43 @@ services:
       - "5000:5000"
     env_file:
       - ./.env
+    environment:
+      - CONTAINER_TYPE='web'
     depends_on:
       - mongodb
+      - neo4j
+      - celery-worker
   mongodb:
     image: mongo:latest
     restart: always
     volumes:
       - data-volume:/data/db
+  neo4j:
+    image: neo4j:3.5
+    restart: unless-stopped
+    ports:
+      - 7474:7474
+      - 7687:7687
+    volumes:
+      - ./conf:/conf
+      - ./data:/data
+      - ./import:/import
+      - ./logs:/logs
+      - ./plugins:/plugins
+    environment:
+      # Raise memory limits
+      - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASS}
+      - NEO4J_dbms_memory_pagecache_size=1G
+      - NEO4J_dbms.memory.heap.initial_size=1G
+      - NEO4J_dbms_memory_heap_max__size=1G
+  celery-worker:
+    build:
+      context: "."
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    environment:
+      - CONTAINER_TYPE='celery_worker'
 volumes:
     data-volume:
