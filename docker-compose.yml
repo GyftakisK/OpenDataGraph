@@ -7,14 +7,16 @@ services:
     env_file:
       - ./.env
     environment:
-      - CONTAINER_TYPE='web'
+      - CONTAINER_TYPE=web
     depends_on:
       - mongodb
       - neo4j
       - celery-worker
+    volumes:
+      - /tmp:${UPLOAD_FOLDER}
   mongodb:
     image: mongo:latest
-    restart: always
+    restart: unless-stopped
     volumes:
       - data-volume:/data/db
   neo4j:
@@ -24,11 +26,10 @@ services:
       - 7474:7474
       - 7687:7687
     volumes:
-      - ./conf:/conf
-      - ./data:/data
-      - ./import:/import
-      - ./logs:/logs
-      - ./plugins:/plugins
+      - ${HOME}/neo4j/data:/data
+      - ${HOME}/neo4j/logs:/logs
+      - ${HOME}/neo4j/import:/import
+      - ${HOME}/neo4j/plugins:/plugins
     environment:
       # Raise memory limits
       - NEO4J_AUTH=${NEO4J_USER}/${NEO4J_PASS}
@@ -43,6 +44,8 @@ services:
     env_file:
       - .env
     environment:
-      - CONTAINER_TYPE='celery_worker'
+      - CONTAINER_TYPE=celery_worker
+    volumes:
+      - /tmp:${UPLOAD_FOLDER}
 volumes:
     data-volume:

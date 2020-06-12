@@ -1,6 +1,6 @@
 #!/bin/sh
 source venv/bin/activate
-env
+echo $(env)
 if [ "$CONTAINER_TYPE" = "web" ]
 then
     echo "Booting web..."
