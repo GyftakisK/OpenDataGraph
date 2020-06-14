@@ -51,6 +51,8 @@ services:
   celery-mail-worker:
     build:
       context: "."
+    depends_on:
+      - mongodb
     env_file:
       - .env
     environment:
