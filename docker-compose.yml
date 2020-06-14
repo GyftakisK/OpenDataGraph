@@ -11,7 +11,8 @@ services:
     depends_on:
       - mongodb
       - neo4j
-      - celery-worker
+      - celery-job-worker
+      - celery-mail-worker
     volumes:
       - /tmp:${UPLOAD_FOLDER}
   mongodb:
@@ -36,7 +37,7 @@ services:
       - NEO4J_dbms_memory_pagecache_size=1G
       - NEO4J_dbms.memory.heap.initial_size=1G
       - NEO4J_dbms_memory_heap_max__size=1G
-  celery-worker:
+  celery-job-worker:
     build:
       context: "."
     depends_on:
@@ -44,8 +45,15 @@ services:
     env_file:
       - .env
     environment:
-      - CONTAINER_TYPE=celery_worker
+      - CONTAINER_TYPE=celery_job_worker
     volumes:
       - /tmp:${UPLOAD_FOLDER}
+  celery-mail-worker:
+    build:
+      context: "."
+    env_file:
+      - .env
+    environment:
+      - CONTAINER_TYPE=celery_mail_worker
 volumes:
     data-volume:

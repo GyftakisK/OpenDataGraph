@@ -4,7 +4,7 @@ from flask_mail import Message
 from app import mail, celery
 
 
-@celery.task
+@celery.task(queue='mailQueue')
 def send_email(subject, sender, recipients, text_body, html_body,
                attachments=None):
     msg = Message(subject, sender=sender, recipients=recipients)

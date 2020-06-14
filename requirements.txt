@@ -27,7 +27,6 @@ importlib-metadata==1.6.1
 itsdangerous==1.1.0
 Jinja2==2.11.2
 joblib==0.15.1
-jwt==1.0.0
 kombu==4.6.10
 langid==1.1.6
 lxml==4.5.1
@@ -37,6 +36,7 @@ nltk==3.5
 numpy==1.18.4
 py2neo==3.1.2
 pycparser==2.20
+pyjwt==1.7.1
 pymetamap==0.1
 pymongo==3.10.1
 pyquery==1.4.1
