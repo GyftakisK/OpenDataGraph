@@ -3,6 +3,7 @@ FROM alpine:3.7
 
 ### 2. Get Java via the package manager
 RUN apk add --update \
+    bash \
     python3 \
     python3-dev \
     py-pip \
