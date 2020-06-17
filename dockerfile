@@ -1,22 +1,14 @@
 ### 1. Get Linux
-FROM alpine:3.7
+FROM fnndsc/ubuntu-python3
 
 ### 2. Get Java via the package manager
-RUN apk add --update \
-    bash \
-    python3 \
-    python3-dev \
-    py-pip \
-    build-base \
-    openjdk8-jre \
-    libffi-dev \
-    libxml2-dev \
-    libxslt-dev \
-    yajl-dev \
-    openssl-dev \
-  && rm -rf /var/cache/apk/*
+RUN apt-get update && apt-get install -y \
+    openjdk-8-jdk \
+    libyajl-dev \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN adduser -D openDataGraph
+RUN useradd -ms /bin/bash openDataGraph
 
 WORKDIR /home/openDataGraph
 RUN mkdir db

@@ -50,6 +50,7 @@ services:
     volumes:
       - /tmp:${UPLOAD_FOLDER}
       - ${SEMREP_DIR}:${SEMREP_DIR}
+      - ${METAMAP_DIR}:${METAMAP_DIR}
   celery-mail-worker:
     build:
       context: "."
