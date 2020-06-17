@@ -19,6 +19,7 @@ RUN apk add --update \
 RUN adduser -D openDataGraph
 
 WORKDIR /home/openDataGraph
+RUN mkdir db
 
 COPY requirements.txt requirements.txt
 RUN python3 -m venv venv

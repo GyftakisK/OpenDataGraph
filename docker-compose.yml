@@ -15,6 +15,7 @@ services:
       - celery-mail-worker
     volumes:
       - /tmp:${UPLOAD_FOLDER}
+      - sqlite-volume:/data/db
   mongodb:
     image: mongo:latest
     restart: unless-stopped
@@ -60,3 +61,4 @@ services:
       - CONTAINER_TYPE=celery_mail_worker
 volumes:
     data-volume:
+    sqlite-volume:
