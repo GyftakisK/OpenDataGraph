@@ -10,7 +10,7 @@ from medknow.config import settings
 from medknow.tasks import taskCoordinator
 from utilities import get_filename_from_file_path, NotSupportedOboFile, DiseaseAlreadyInGraph, NoDiseasesInGraph
 from typing import List, Dict
-DEBUG = True
+DEBUG = False 
 
 
 class KnowledgeExtractor:
