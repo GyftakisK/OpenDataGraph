@@ -1,6 +1,10 @@
+.env
 .git
 .gitignore
-app.db
-venv
+.gitmodules
+.idea
+__pycache__
 env_development.sh
 start_celery_worker.sh
+venv
+app.db
