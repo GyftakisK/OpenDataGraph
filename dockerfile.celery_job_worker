@@ -14,13 +14,11 @@ RUN apt-get update \
 RUN useradd -ms /bin/bash openDataGraph
 
 WORKDIR /home/openDataGraph
-RUN mkdir db
 
 COPY requirements.txt requirements.txt
 RUN python3 -m venv venv \
     && venv/bin/pip install --upgrade pip setuptools \
-    && venv/bin/pip install -r requirements.txt \
-    && venv/bin/pip install gunicorn
+    && venv/bin/pip install -r requirements.txt
 
 COPY . ./
 
@@ -29,5 +27,4 @@ RUN chown -R openDataGraph:openDataGraph ./ \
 
 USER openDataGraph
 
-EXPOSE 5000
 ENTRYPOINT ["./boot.sh"]

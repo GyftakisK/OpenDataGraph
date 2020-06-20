@@ -1,7 +1,9 @@
 version: '3'
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: dockerfile.web
     ports:
       - "5000:5000"
     env_file:
@@ -40,7 +42,8 @@ services:
       - NEO4J_dbms_memory_heap_max__size=1G
   celery-job-worker:
     build:
-      context: "."
+      context: .
+      dockerfile: dockerfile.celery_job_worker
     depends_on:
       - mongodb
     env_file:
@@ -53,7 +56,8 @@ services:
       - ${METAMAP_DIR}:${METAMAP_DIR}
   celery-mail-worker:
     build:
-      context: "."
+      context: .
+      dockerfile: dockerfile.celery_email_worker
     depends_on:
       - mongodb
     env_file:
