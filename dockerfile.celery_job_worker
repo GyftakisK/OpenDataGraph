@@ -11,9 +11,8 @@ RUN apt-get update \
   python3-venv \
   && rm -rf /var/lib/apt/lists/*
 
-RUN useradd -ms /bin/bash openDataGraph
-
-WORKDIR /home/openDataGraph
+RUN useradd -ms /bin/bash --uid=INVALID_UID openDataGraph
+WORKDIR /home/openDataGraph/app
 
 COPY requirements.txt requirements.txt
 RUN python3 -m venv venv \
