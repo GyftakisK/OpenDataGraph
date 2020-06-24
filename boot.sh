@@ -4,7 +4,7 @@ if [ "$CONTAINER_TYPE" = "web" ]
 then
     echo "Booting web..."
     flask init_db
-    gunicorn -b 0.0.0.0:5000 "app:create_app()"
+    gunicorn -b 0.0.0.0:5000 $GUNICORN_OPTIONS "app:create_app()"
 fi
 if [ "$CONTAINER_TYPE" = "celery_job_worker" ]
 then
