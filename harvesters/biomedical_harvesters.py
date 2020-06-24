@@ -57,7 +57,7 @@ class HarvestOBOWrapper(HarvesterWrapper):
         super().__init__("HarvestOBO.jar", mongo_host, mongo_host_port, mongo_dbname)
         self._base_folder = os.path.dirname(os.path.realpath(file_path))
         filename = get_filename_from_file_path(file_path)
-        self._input_obo_name = filename.strip(".obo") if ".obo" in filename else filename
+        self._input_obo_name = filename.replace(".obo", "") if ".obo" in filename else filename
 
     @property
     def input_obo_name(self):

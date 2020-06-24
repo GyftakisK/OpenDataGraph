@@ -25,7 +25,7 @@ class HarvestersTestSuite(unittest.TestCase):
                                            mongo_collection="test_DrugBank")
         expected_settings = [
             "inputFilePath: /test_path/DrugBank.xml",
-            "mongodb: {collection: test_DrugBank, dbname: test, host: 127.0.0.1, port: 27017}"
+            "mongodb:", "dbname: test", "host: 127.0.0.1", "port: 27017"
         ]
         self.assert_harvester_settings(harvester, expected_settings)
 
@@ -37,7 +37,19 @@ class HarvestersTestSuite(unittest.TestCase):
         expected_settings = [
             "baseFolder: /test_path",
             "inputOBOName: doid",
-            "mongodb: {dbname: test, host: 127.0.0.1, port: 27017}"
+            "mongodb:", "dbname: test", "host: 127.0.0.1", "port: 27017"
+        ]
+        self.assert_harvester_settings(harvester, expected_settings)
+
+    def test_go_obo(self):
+        harvester = HarvestOBOWrapper("/test_path/go.obo",
+                                      mongo_host="127.0.0.1",
+                                      mongo_host_port=27017,
+                                      mongo_dbname="test")
+        expected_settings = [
+            "baseFolder: /test_path",
+            "inputOBOName: go",
+            "mongodb:", "dbname: test", "host: 127.0.0.1", "port: 27017"
         ]
         self.assert_harvester_settings(harvester, expected_settings)
 
@@ -52,10 +64,10 @@ class HarvestersTestSuite(unittest.TestCase):
                                          mongo_dbname="test")
         expected_settings = [
             "baseFolder: /test_path/",
-            "date: {from: 2020/04/15, to: 2020/05/15}",
+            "date:", "from: 2020/04/15", "to: 2020/05/15",
             "datasetId: DMD",
-            "meshTerms: ['Muscular Dystrophy, Duchenne']",
-            "mongodb: {dbname: test, host: 127.0.0.1, port: 27017}"
+            "Muscular Dystrophy, Duchenne",
+            "mongodb:", "dbname: test", "host: 127.0.0.1", "port: 27017"
         ]
         self.assert_harvester_settings(harvester, expected_settings)
 
@@ -70,10 +82,11 @@ class HarvestersTestSuite(unittest.TestCase):
                                          mongo_dbname="test")
         expected_settings = [
             "baseFolder: /test_path/",
-            "date: {from: 2020/04/15, to: 2020/05/15}",
+            "from: 2020/04/15",
+            "to: 2020/05/15",
             "datasetId: UPDATE",
-            "meshTerms: ['Muscular Dystrophy, Duchenne', Lung Cancer]",
-            "mongodb: {dbname: test, host: 127.0.0.1, port: 27017}"
+            "Muscular Dystrophy, Duchenne", "Lung Cancer",
+            "mongodb:", "dbname: test", "host: 127.0.0.1", "port: 27017"
         ]
         self.assert_harvester_settings(harvester, expected_settings)
 
