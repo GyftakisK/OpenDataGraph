@@ -19,10 +19,9 @@ RUN python3 -m venv venv \
     && venv/bin/pip install --upgrade pip setuptools \
     && venv/bin/pip install -r requirements.txt
 
-COPY . ./
+COPY --chown=openDataGraph:openDataGraph . ./
 
-RUN chown -R openDataGraph:openDataGraph ./ \
-    && chmod +x boot.sh
+RUN chmod +x boot.sh
 
 USER openDataGraph
 
