@@ -13,6 +13,8 @@ class MongoDbManager:
         :param new_name: New name of collection
         :return:
         """
+        if self.collection_exists(new_name):
+            self._mongodb_inst[new_name].drop()
         self._mongodb_inst[old_name].rename(new_name)
 
     def prune_collection(self, collection, count_after_prune):
