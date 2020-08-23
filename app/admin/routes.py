@@ -1,11 +1,12 @@
 import os
 from app.admin import bp
-from flask import render_template, redirect, url_for, jsonify, current_app
+from flask import render_template, redirect, url_for, jsonify, current_app, request
 from app.admin.forms import LiteratureForm, StructuredDrugbankForm, StructuredOboForm
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import extractor, db
-from app.tasks import add_disease_task, update_literature_task, add_drugbank_task, add_obo_task
+from app.tasks import (add_disease_task, update_literature_task, add_drugbank_task, add_obo_task,
+                       remove_structured_resource)
 from app.utilities import flash_error, flash_success
 from app.models import Task, User
 
@@ -111,3 +112,22 @@ def monitor_jobs():
     return render_template('admin/monitor_jobs.html',
                            title="Monitor Jobs",
                            jobs=reversed(jobs))
+
+
+@bp.route('remove_resource', methods=['POST'])
+@login_required
+def remove_resource():
+    resource_type = request.form.get("type")
+    resource_version = request.form.get("version")
+    # Retrieve data from the request and remove it from the database
+    if resource_type and resource_version:
+        task = remove_structured_resource.apply_async([resource_type, resource_version])
+        save_task(task.task_id, "remove_structured_resource",
+                  str({"resource_type": resource_type, "resource_version": resource_version}))
+        json_content = {'return_code': 'SUCCESS',
+                        'message': 'Job {} created for "{}_{}"'.format(task.task_id, resource_type, resource_version)}
+
+    else:
+        json_content = {'return_code': 'FAILURE',
+                        'message': 'Invalid input'}
+    return jsonify(json_content)

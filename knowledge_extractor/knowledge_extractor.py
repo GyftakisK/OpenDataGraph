@@ -5,10 +5,12 @@ import multiprocessing
 import os
 
 from db_manager.mongodb_manager import MongoDbManager
+from db_manager.neo4j_manager import NeoManager
 from harvesters.biomedical_harvesters import HarvestDrugBankWrapper, HarvestOBOWrapper, HarvestEntrezWrapper
 from medknow.config import settings
 from medknow.tasks import taskCoordinator
-from utilities import get_filename_from_file_path, NotSupportedOboFile, DiseaseAlreadyInGraph, NoDiseasesInGraph
+from utilities import (get_filename_from_file_path, NotSupportedOboFile, DiseaseAlreadyInGraph, NoDiseasesInGraph,
+                       ResourceNotInGraph)
 from typing import List, Dict
 DEBUG = False 
 
@@ -26,6 +28,7 @@ class KnowledgeExtractor:
         self._neo4j_pass = None
         self._umls_api_key = None
         self._mongodb_manager = None
+        self._neo4j_manager = None
         self._supported_obo_types = ['DO', 'GO', 'MeSH']
         self._literature_harvester_sources = ("pmc", "pubmed", "pubmed_MeSH")
         logging.basicConfig(level=logging.DEBUG,
@@ -48,6 +51,7 @@ class KnowledgeExtractor:
         self._neo4j_pass = os.environ.get('NEO4J_PASS')
         self._umls_api_key = os.environ.get('UMLS_API_KEY')
         self._mongodb_manager = MongoDbManager(self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
+        self._neo4j_manager = NeoManager(self._neo4j_host, self._neo4j_port, self._neo4j_user, self._neo4j_pass)
 
     def update_drugbank(self, path_to_file: str, version: str = None):
         """
@@ -87,6 +91,20 @@ class KnowledgeExtractor:
         self._run_medknow()
         metadata_input = {'filename': get_filename_from_file_path(path_to_file), "type": obo_type, "version": version}
         self._update_job_metadata(job_name, metadata_input)
+
+    def remove_resource(self, resource_name: str):
+        """
+        Method to remove from graph all elements from a specified resource
+        :param resource_name: name of the resource to be removed
+        """
+        entry = self._mongodb_manager.get_entry_from_field('metadata', "job", resource_name)
+        if not entry:
+            raise ResourceNotInGraph(resource_name)
+
+        self._neo4j_manager.remove_item_from_list_property('resource', resource_name)
+        self._neo4j_manager.delete_relationships_with_empty_list_property('resource')
+        self._neo4j_manager.delete_all_orphan_nodes()
+        self._mongodb_manager.delete_entry_from_field('metadata', "job", resource_name)
 
     def add_disease(self, mesh_term: str):
         """

@@ -24,3 +24,9 @@ def add_drugbank_task(filename, version):
 def add_obo_task(filename, obo_type, version):
     with current_app.app_context():
         extractor.update_obo(filename, obo_type, version=version)
+
+
+@celery.task(queue="jobsQueue")
+def remove_structured_resource(resource_type, version):
+    with current_app.app_context():
+        extractor.remove_resource("{}_{}".format(resource_type.upper(), version))

@@ -47,12 +47,13 @@
                 <div class="panel panel-primary">
                     <div class="panel-heading"><h3>Structured resources</h3></div>
                     <div id="struct_panel_body" class="panel-body">
-                        <table class="table">
+                        <table class="table" id="structTable">
                             <tr>
                                 <th>Type</th>
                                 <th>Version</th>
                                 <th>Filename</th>
                                 <th>Added on</th>
+                                <th></th>
                             </tr>
                             {% for struct in structured_resources %}
                             <tr>
@@ -60,6 +61,8 @@
                                 <td>{{struct['version']}}</td>
                                 <td>{{struct['filename']}}</td>
                                 <td>{{ moment(struct['last_update']).format('LLL') }} ({{ moment(struct['last_update']).fromNow() }})</td>
+                                <td><button type="submit" class="btn removeButton">
+                                    <span class="glyphicon glyphicon-trash"></span></button></td>
                             </tr>
                             {% endfor %}
                         </table>
@@ -147,6 +150,22 @@
         $(document).ready(function(){
             $('[data-toggle="tooltip"]').tooltip();
         });
+
+
+        $('#structTable').on('click', '.removeButton', function(events){
+            let type = $(this).closest('tr').find('td').eq(0).html();
+            let version = $(this).closest('tr').find('td').eq(1).html();
+            let button = $(this);
+            $.post("{{ url_for('admin.remove_resource') }}", {type : type, version : version}, function(data) {
+                if (data.return_code === 'SUCCESS') {
+                    $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>');
+                    button.closest('tr').remove();
+                }
+                else {
+                    $('#content').prepend('<div class="alert alert-danger" role="alert">' + data.message + '</div>');
+                }
+            });
+          });
 
     </script>
 {% endblock %}

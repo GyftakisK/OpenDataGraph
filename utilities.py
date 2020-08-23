@@ -24,6 +24,11 @@ class NotSupportedOboFile(DiseaseGraphException):
         super(NotSupportedOboFile, self).__init__("Not supported OBO type: {}".format(obo_type))
 
 
+class ResourceNotInGraph(DiseaseGraphException):
+    def __init__(self, resource_name: str):
+        super(ResourceNotInGraph, self).__init__("Couldn't find resource \"{}\" in current graph".format(resource_name))
+
+
 def run_jar(jar_name: str,  args: tuple = ()):
     """
     Utility function to run a JAR
