@@ -23,7 +23,7 @@ RUN python3 -m venv venv \
 
 COPY --chown=openDataGraph:openDataGraph . ./
 
-RUN chmod +x boot.sh
+RUN chown openDataGraph:openDataGraph . && chmod +x boot.sh
 
 USER openDataGraph
 
