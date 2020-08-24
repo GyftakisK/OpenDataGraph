@@ -30,3 +30,9 @@ def add_obo_task(filename, obo_type, version):
 def remove_structured_resource(resource_type, version):
     with current_app.app_context():
         extractor.remove_resource("{}_{}".format(resource_type.upper(), version))
+
+
+@celery.task(queue="jobsQueue")
+def calculate_pagerank_task():
+    with current_app.app_context():
+        extractor.calculate_pagerank()

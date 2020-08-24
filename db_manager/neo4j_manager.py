@@ -35,3 +35,22 @@ class NeoManager(object):
     def delete_relationships_with_empty_list_property(self, property_name):
         query = 'MATCH ()-[r]->() WHERE r.{property_name} = [] DELETE r'.format(property_name=property_name)
         self._run_query(query)
+
+    def create_in_memory_graph(self, graph_name: str):
+        query = "CALL gds.graph.create('{graph_name}', '*', '*') " \
+                "YIELD graphName, nodeCount, relationshipCount".format(graph_name=graph_name)
+        self._run_query(query)
+
+    def drop_in_memory_graph(self, graph_name: str):
+        query = "CALL gds.graph.drop('{graph_name}') YIELD graphName;".format(graph_name=graph_name)
+        self._run_query(query)
+
+    def calculate_pagerank(self, graph_name: str, max_iterations: int, damping_factor: float):
+        query = "CALL gds.pageRank.write('{graph_name}', " \
+                    "{{ maxIterations: {max_iterations}, " \
+                    "dampingFactor: {damping_factor}, " \
+                    "writeProperty: 'pagerank'}}) " \
+                "YIELD nodePropertiesWritten, ranIterations".format(graph_name=graph_name,
+                                                                    max_iterations=max_iterations,
+                                                                    damping_factor=damping_factor)
+        self._run_query(query)

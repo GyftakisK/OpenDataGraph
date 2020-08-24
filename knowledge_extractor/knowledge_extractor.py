@@ -186,6 +186,15 @@ class KnowledgeExtractor:
             print("Last Update: {}".format(structured["last_update"]))
             print("-" * 50)
 
+    def calculate_pagerank(self, max_iterations: int = 50, damping_factor: float = 0.85):
+        """
+        Method to calculate pagerank across the whole graph
+        """
+        self._neo4j_manager.create_in_memory_graph('pagerank_graph')
+        self._neo4j_manager.calculate_pagerank('pagerank_graph', max_iterations=max_iterations,
+                                               damping_factor=damping_factor)
+        self._neo4j_manager.drop_in_memory_graph('pagerank_graph')
+
     @staticmethod
     def _get_num_of_cores() -> int:
         """

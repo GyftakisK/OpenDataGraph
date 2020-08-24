@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import extractor, db
 from app.tasks import (add_disease_task, update_literature_task, add_drugbank_task, add_obo_task,
-                       remove_structured_resource)
+                       remove_structured_resource, calculate_pagerank_task)
 from app.utilities import flash_error, flash_success
 from app.models import Task, User
 
@@ -131,3 +131,11 @@ def remove_resource():
         json_content = {'return_code': 'FAILURE',
                         'message': 'Invalid input'}
     return jsonify(json_content)
+
+
+@bp.route('calculate_pagerank', methods=['POST'])
+@login_required
+def calculate_pagerank():
+    task = calculate_pagerank_task.apply_async()
+    save_task(task.task_id, "calculate_pagerank", "")
+    return jsonify({'message': 'Job {} created for PageRank calculation'.format(task.task_id)})

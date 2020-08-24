@@ -83,6 +83,18 @@
                 </div>
             </div>
         </div>
+        <div id="admin-actions" class="row" >
+            <div class="col-md-12">
+                <div class="panel panel-primary">
+                    <div class="panel-heading"><h3>Admin actions</h3></div>
+                    <div class="panel-body">
+                        <button id="calculate_pagerank" type="button" class="btn btn-default btn-lg">
+                            Calculate PageRank
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         <div id="job-status" class="row" >
             <div class="col-md-12">
                 <div class="panel panel-primary">
@@ -151,6 +163,13 @@
             $('[data-toggle="tooltip"]').tooltip();
         });
 
+        const calculatePagerankBtn = $('#calculate_pagerank');
+        function calculate_pagerank() {
+            $.post("{{ url_for('admin.calculate_pagerank') }}", function(data) {
+                $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
+            });
+        }
+        calculatePagerankBtn.click(calculate_pagerank);
 
         $('#structTable').on('click', '.removeButton', function(events){
             let type = $(this).closest('tr').find('td').eq(0).html();
