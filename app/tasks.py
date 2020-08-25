@@ -1,5 +1,6 @@
-from flask import current_app
 from app import celery, extractor
+from flask import current_app
+from .utilities import handle_uploaded_file
 
 
 @celery.task(queue="jobsQueue")
@@ -17,13 +18,13 @@ def add_disease_task(mesh_term):
 @celery.task(queue="jobsQueue")
 def add_drugbank_task(filename, version):
     with current_app.app_context():
-        extractor.update_drugbank(filename, version=version)
+        extractor.update_drugbank(handle_uploaded_file(filename, ['xml']), version=version)
 
 
 @celery.task(queue="jobsQueue")
 def add_obo_task(filename, obo_type, version):
     with current_app.app_context():
-        extractor.update_obo(filename, obo_type, version=version)
+        extractor.update_obo(handle_uploaded_file(filename, ['obo']), obo_type, version=version)
 
 
 @celery.task(queue="jobsQueue")
