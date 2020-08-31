@@ -32,7 +32,7 @@ Mako==1.1.3
 MarkupSafe==1.1.1
 nltk==3.5
 numpy==1.18.4
-py2neo==3.1.2
+py2neo==2020.0
 pycparser==2.20
 pyjwt==1.7.1
 pymetamap==0.1
