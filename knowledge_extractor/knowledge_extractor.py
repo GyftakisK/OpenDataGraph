@@ -373,6 +373,7 @@ class KnowledgeExtractor:
         """
         Helper method to run Medknow
         """
+        print("Running Medknow with settings={}".format(settings))
         task_manager = taskCoordinator()
         task_manager.print_pipeline()
         task_manager.run()
