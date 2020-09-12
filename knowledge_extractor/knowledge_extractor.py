@@ -9,6 +9,7 @@ from db_manager.neo4j_manager import NeoManager
 from harvesters.biomedical_harvesters import HarvestDrugBankWrapper, HarvestOBOWrapper, HarvestEntrezWrapper
 from medknow.config import settings
 from medknow.tasks import taskCoordinator
+from .metamap_server_manager import MetamapServerManager
 from utilities import (get_filename_from_file_path, NotSupportedOboFile, DiseaseAlreadyInGraph, NoDiseasesInGraph,
                        ResourceNotInGraph)
 from typing import List, Dict
@@ -29,6 +30,7 @@ class KnowledgeExtractor:
         self._umls_api_key = None
         self._mongodb_manager = None
         self._neo4j_manager = None
+        self._metamap_server_manager = None
         self._supported_obo_types = ['DO', 'GO', 'MeSH']
         self._literature_harvester_sources = ("pmc", "pubmed", "pubmed_MeSH")
         logging.basicConfig(level=logging.DEBUG,
@@ -52,6 +54,7 @@ class KnowledgeExtractor:
         self._umls_api_key = os.environ.get('UMLS_API_KEY')
         self._mongodb_manager = MongoDbManager(self._mongodb_host, self._mongodb_port, self._mongodb_db_name)
         self._neo4j_manager = NeoManager(self._neo4j_host, self._neo4j_port, self._neo4j_user, self._neo4j_pass)
+        self._metamap_server_manager = MetamapServerManager()
 
     def update_drugbank(self, path_to_file: str, version: str = None):
         """
@@ -457,6 +460,8 @@ class KnowledgeExtractor:
                     self._mongodb_manager.prune_collection(collection, 1)
                 else:
                     self._mongodb_manager.prune_collection(collection, 10)
+
+        self._metamap_server_manager.start_servers()
         for source, collection in available_collections_per_source.items():
             self._set_basic_medknow_settings()
             if source == "pubmed_MeSH":
@@ -467,5 +472,5 @@ class KnowledgeExtractor:
             self._run_medknow()
             if source != "pubmed_MeSH":
                 self._update_pmids(source, harvested_pmids[source])
-
+        self._metamap_server_manager.stop_servers()
         self._update_job_metadata(job_name, mesh_terms, date_to)

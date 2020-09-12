@@ -9,8 +9,6 @@ fi
 if [ "$CONTAINER_TYPE" = "celery_job_worker" ]
 then
     echo "Booting celery jobs worker..."
-    $METAMAP_DIR/bin/skrmedpostctl start
-    $METAMAP_DIR/bin/wsdserverctl start
     celery worker -A celery_worker.celery --loglevel=INFO --pool threads --concurrency=1 -Q jobsQueue
 fi
 if [ "$CONTAINER_TYPE" = "celery_mail_worker" ]
