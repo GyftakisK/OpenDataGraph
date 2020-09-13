@@ -343,6 +343,7 @@ class KnowledgeExtractor:
         settings["load"]["edges"]["obj_source"] = settings_from_type[job_type]["obj"]["source"]
         settings["neo4j"]["resource"] = resource
         settings["out"]["json"]["itemfield"] = job_type
+        settings["batch_per_core"] = 500
 
     def _set_pubmed_medknow_settings(self, collection: str, resource: str, collection_type: str):
         """
