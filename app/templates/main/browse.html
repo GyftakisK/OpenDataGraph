@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{super()}}
+  <style>
+      .ui-autocomplete-loading {
+        background: white url({{ url_for('static', filename='loading.gif') }}) right center no-repeat;
+      }
+  </style>
+{% endblock %}
+
+{% block app_content %}
+    <h1>Graph Browser</h1>
+    <div>
+        <br>
+        <div id="resource-status" class="row">
+            <div class="col-md-12">
+                <input id="search" type="text" class="form-control" placeholder="Input search term">
+            </div>
+        </div>
+        <br>
+        <div id="nodes_display" class="row">
+            <div id="toolbox" class="col-md-4">
+            </div>
+            <div id="canvas" class="col-md-8">
+            </div>
+        </div>
+        <div id="articles_display" class="row">
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script type=text/javascript>
+        $("#search").autocomplete({
+            source: function (request, response) {
+                $.getJSON("{{url_for('main.autocomplete')}}", {
+                    q: request.term, // in flask, "q" will be the argument to look for using request.args
+                }, function (data) {
+                    response(data.matching_results); // matching_results from jsonify
+                });
+            },
+            minLength: 2,
+            select: function (event, ui) {
+                console.log(ui.item.value);
+            }
+        });
+    </script>
+{% endblock %}

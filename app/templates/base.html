@@ -1,5 +1,10 @@
 {% extends 'bootstrap/base.html' %}
 
+{% block head %}
+{{super()}}
+<link href="http://code.jquery.com/ui/1.10.2/themes/smoothness/jquery-ui.css" rel="Stylesheet"></link>
+{% endblock %}
+
 {% block title %}
     {% if title %}{{ title }} - Open Data Graph{% else %}Welcome to Open Data Graph{% endif %}
 {% endblock %}
@@ -19,6 +24,7 @@
             <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
                 <ul class="nav navbar-nav">
                     <li><a href="{{ url_for('main.index') }}">Home</a></li>
+                    <li><a href="{{ url_for('main.browse') }}">Browse</a></li>
                 </ul>
                 <ul class="nav navbar-nav navbar-right">
                     {% if current_user.is_authenticated and current_user.is_admin %}

@@ -17,8 +17,9 @@ class NeoManager(object):
     def _run_query(self, query: str):
         self._connect()
         print("Running cypher query: {}".format(query))
-        self.__graph.run(query)
+        result = self.__graph.run(query)
         print("Query completed")
+        return result
 
     def delete_all_orphan_nodes(self):
         query = "MATCH (n) WHERE NOT (n)--() DELETE n"
@@ -54,3 +55,9 @@ class NeoManager(object):
                                                                     max_iterations=max_iterations,
                                                                     damping_factor=damping_factor)
         self._run_query(query)
+
+    def get_entities_matching_labels_beginning(self, search_string: str, limit: int):
+        query = "MATCH (n:Entity) WHERE n.label STARTS WITH '{search_string}' " \
+                "RETURN n.label AS label LIMIT {limit}".format(search_string=search_string, limit=limit)
+        result = self._run_query(query)
+        return [node["label"] for node in result]
