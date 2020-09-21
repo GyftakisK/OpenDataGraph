@@ -57,7 +57,29 @@ class NeoManager(object):
         self._run_query(query)
 
     def get_entities_matching_labels_beginning(self, search_string: str, limit: int):
-        query = "MATCH (n:Entity) WHERE n.label STARTS WITH '{search_string}' " \
-                "RETURN n.label AS label LIMIT {limit}".format(search_string=search_string, limit=limit)
+        query = f"MATCH (n:Entity) WHERE n.label =~ '(?i){search_string}.*' " \
+                f"RETURN n.label AS label LIMIT {limit}"
         result = self._run_query(query)
         return [node["label"] for node in result]
+
+    def get_node_and_neighbors(self, node_label: str, num_of_neighbors: int):
+        query = f"MATCH (n:Entity) " \
+                f"WHERE n.label = '{node_label}' " \
+                f"RETURN n"
+        result = self._run_query(query)
+        node = result.data()[-1]["n"]
+
+        query = f"MATCH (n:Entity)-[r]-(:Entity) " \
+                f"WHERE n.label = '{node_label}' " \
+                f"RETURN r LIMIT {num_of_neighbors}"
+        result = self._run_query(query)
+        return node, [record["r"] for record in result.data()]
+
+    def get_articles_for_entity(self, node_label: str):
+        query = f"MATCH(n: Entity)-[] - (m:Article) " \
+                f"WHERE n.label = '{node_label}' " \
+                f"RETURN m.id, m.title, m.journal"
+        result = self._run_query(query)
+        return [{"pmid": record["m.id"],
+                 "title": record["m.title"],
+                 "journal": record["m.journal"]} for record in result.data()]
