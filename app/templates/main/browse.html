@@ -288,9 +288,19 @@
                         titleCell.appendChild(titleText);
 
                         let journalCell = newRow.insertCell(2);
-                        journalCell.setAttribute("style", "width: 20%");
+                        journalCell.setAttribute("style", "width: 15%");
                         let journalText = document.createTextNode(journal);
                         journalCell.appendChild(journalText);
+
+                        let linkCell = newRow.insertCell(3);
+                        linkCell.setAttribute("style", "width: 5%");
+                        let link = document.createElement('a');
+                        link.href = 'https://pubmed.ncbi.nlm.nih.gov/' + pmid;
+                        link.setAttribute("target", "_blank");
+                        let span = document.createElement("SPAN");
+                        span.setAttribute("class", "glyphicon glyphicon-link");
+                        link.appendChild(span);
+                        linkCell.appendChild(link);
                     }
 
                     let prevBody = document.getElementById("articleTableBody");
