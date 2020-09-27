@@ -39,14 +39,12 @@ def handle_uploaded_file(filename: str, allowed_extensions: list):
 def relationships_to_d3_data(query_node, relationships):
     nodes = {query_node.identity: {"id": 0, "cui": query_node["id"], "label": query_node["label"]}}
     links = []
-    node_id = 1
     for relationship in relationships:
         start_node = relationship.start_node
         end_node = relationship.end_node
         for node in (start_node, end_node):
             if node.identity not in nodes:
-                nodes[node.identity] = {"id": node_id, "cui": node["id"], "label": node["label"]}
-                node_id += 1
+                nodes[node.identity] = {"id": node.identity, "cui": node["id"], "label": node["label"]}
         links.append({"source": nodes[start_node.identity]["id"], "target": nodes[end_node.identity]["id"],
                       "type": type(relationship).__name__, "weight": 1})
     return {"nodes": list(nodes.values()), "links": links}
