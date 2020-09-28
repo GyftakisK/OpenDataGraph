@@ -84,6 +84,7 @@
     {{ super() }}
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script src="https://d3js.org/d3.v6.min.js"></script>
+    <script type=text/javascript src="{{url_for('static', filename='semantic_types.js') }}"></script>
     <script type=text/javascript>
         let width = 500,
             height = 500;
@@ -91,6 +92,9 @@
 
         let nodes = []
         let links = []
+
+        let color = d3.scaleOrdinal(get_sem_types(),
+            d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
 
         const svg = d3.create("svg")
             .property("value", {nodes: [], links: []})
@@ -206,11 +210,6 @@
                     update => update,
                     exit => exit.remove());
 
-            link.append("title")
-                .text(function (d) {
-                    return d.type;
-                });
-
             edgepaths = edgepaths.data(links)
                 .join(
                     enter => enter.append('path')
@@ -266,11 +265,16 @@
 
             svg.selectAll(".node_circle").remove();
 
-            node.append("circle")
+            let cicle = node.append("circle")
                 .attr("class", "node_circle")
                 .attr("r", nodeSize)
-                .attr("fill", "#66CCCC")
+                .attr("fill", d => color(d.sem_types[0]))
                 .attr("fill-opacity", 0.9);
+
+            cicle.append("title")
+                .text(function (d) {
+                    return sem_type_abrv_to_text(d.sem_types);
+                });
 
             svg.selectAll(".node_text").remove();
 
