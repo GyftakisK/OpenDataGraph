@@ -59,14 +59,15 @@
             </div>
             <div id="canvas" class="col-lg-5 border rounded">
             </div>
-            <div id="articles_display" class="col-lg-5">
+            <div id="articlesDisplay" class="col-lg-5">
                 <div class="card card-primary">
                     <div class="card-header bg-primary">
                         <h3 id="term" class="card-title"></h3>
-                        <h4 class="card-title">mentioned in</h4>
                     </div>
-                    <div id="struct_card_body" class="card-body table-responsive">
-                        <table class="table table-striped" id="articleTable">
+                    <div class="card-body table-responsive">
+                        <div id="nodeInfo" style="display: none">Semantic Type:</div>
+                        <h4>Related Articles</h4>
+                        <table class="table" id="articleTable">
                             <thead>
                             <tr>
                                 <th style="width: 15%">PMID</th>
@@ -75,6 +76,10 @@
                             </tr>
                             </thead>
                         </table>
+                        <div class="d-flex flex-row-reverse">
+                            <p class="p-2"><em>* highlighted articles include term as topic</em></p>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -213,8 +218,9 @@
             focus_node = d3.select(this);
             focus_node.attr("stroke", "black");
             focus_node.select(".node_circle").attr("stroke", "black");
+            update_info(d);
             add_articles(d.label);
-            $("#term").html('<strong>' + d.label + '</strong>');
+
 
         }
 
@@ -297,7 +303,7 @@
 
             cicle.append("title")
                 .text(function (d) {
-                    return sem_type_abrv_to_text(d.sem_types);
+                    return sem_types_abrv_to_text(d.sem_types);
                 });
 
             svg.selectAll(".node_text").remove();
@@ -324,20 +330,47 @@
         function plot(node_label) {
             $.post("{{url_for('main.graph')}}", {label: node_label})
                 .done(function (data) {
-                        $("#term").html('<strong>' + data.nodes[0].label + '</strong>');
+                        update_info(data.nodes[0])
                         createForceNetwork(data.nodes, data.links);
                     }
                 );
         }
 
+        function update_info(node) {
+            $("#term").html('<strong>' + node.label + '</strong>');
+
+            let info = document.getElementById("nodeInfo");
+            if (info.style.display === "none") info.style.display = "block";
+
+
+            let prevUl = document.getElementById("semTypeList");
+            if (prevUl) {
+                prevUl.remove();
+            }
+
+            let ul = document.createElement('ul');
+            ul.setAttribute("id", "semTypeList")
+            document.getElementById('nodeInfo').appendChild(ul);
+
+            node.sem_types.forEach(function (sem_type) {
+                let li = document.createElement('li');
+                li.style.color = color(sem_type);
+                ul.appendChild(li);
+                li.innerHTML = '<p style="color:' + color(sem_type) + '">' + sem_type_abrv_to_text(sem_type) + '<\p>';
+            });
+        }
+
         function add_articles(node_label) {
             $.post("{{url_for('main.articles')}}", {label: node_label})
                 .done(function (data) {
-                    function addArticleRow(pmid, title, journal) {
+                    function addArticleRow(pmid, title, journal, rel) {
                         // Get a reference to the table
                         let tbody = document.getElementById("articleTableBody");
 
                         let newRow = tbody.insertRow(-1);
+                        if (rel === 'HAS_MESH') {
+                            newRow.setAttribute("class", "table-primary")
+                        }
 
                         let pmidCell = newRow.insertCell(0);
                         pmidCell.setAttribute("style", "width: 15%");
@@ -374,7 +407,8 @@
                     let newBody = document.createElement("TBODY");
                     newBody.setAttribute("id", "articleTableBody");
                     tableRef.appendChild(newBody);
-                    data.forEach(element => addArticleRow(element.pmid, element.title, element.journal));
+                    data.forEach(element => addArticleRow(element.pmid, element.title,
+                        element.journal, element.rel));
                 });
         }
 

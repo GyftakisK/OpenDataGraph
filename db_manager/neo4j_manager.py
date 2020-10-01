@@ -76,10 +76,11 @@ class NeoManager(object):
         return node, [record["r"] for record in result.data()]
 
     def get_articles_for_entity(self, node_label: str):
-        query = f"MATCH(n: Entity)-[] - (m:Article) " \
+        query = f"MATCH(n: Entity)-[r]-(m:Article) " \
                 f"WHERE n.label = '{node_label}' " \
-                f"RETURN m.id, m.title, m.journal"
+                f"RETURN m.id, m.title, m.journal, type(r) AS rel"
         result = self._run_query(query)
         return [{"pmid": record["m.id"],
                  "title": record["m.title"],
-                 "journal": record["m.journal"]} for record in result.data()]
+                 "journal": record["m.journal"],
+                 "rel": record["rel"]} for record in result.data()]

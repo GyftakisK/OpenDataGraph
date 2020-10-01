@@ -128,8 +128,12 @@ const semantic_types = {
 "vtbt": "Vertebrate"
 };
 
-function sem_type_abrv_to_text(sem_types) {
-    return sem_types.map(sem_type => semantic_types[sem_type]).join('|');
+function sem_types_abrv_to_text(sem_types) {
+    return sem_types.map(sem_type => semantic_types[sem_type]).join(' | ');
+}
+
+function sem_type_abrv_to_text(sem_type) {
+    return semantic_types[sem_type];
 }
 
 function get_sem_types() {
