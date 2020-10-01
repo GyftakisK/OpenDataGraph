@@ -1,140 +1,179 @@
 {% extends 'base.html' %}
-{% import 'bootstrap/wtf.html' as wtf %}
+{% from 'bootstrap/form.html' import render_form %}
 
 {% block app_content %}
-    <h1>Admin dashboard</h1>
-    <div>
+
+    <div class="container">
+        <h1>Admin dashboard</h1>
+        <br>
         <h2>Status</h2>
         <div id="resource-status" class="row">
             <div class="col-md-6">
-                <div class="panel panel-primary">
-                    <div class="panel-heading"><h3>Literature</h3></div>
-                    <div id="literature_panel_body" class="panel-body">
-                        <table class="table">
-                            <tr>
-                                <th>Diseases in graph</th>
-                            </tr>
-                            {% for mesh in mesh_terms %}
-                            <tr>
-                                <td>{{mesh}}</td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                        {% if last_update %}
-                        <p class="pull-right"><strong>Last update: {{ moment(last_update).format('LLL') }} ({{ moment(last_update).fromNow() }})</strong></p>
-                        {% else %}
-                        <p class="pull-right"><strong>Last update: Never</strong></p>
-                        {% endif %}
+                <div class="card">
+                    <div class="card-header bg-primary">
+                        <h3 class="card-title">Literature</h3>
+                    </div>
+                    <div id="literature_card_body" class="card-body">
+                        <div class="row">
+                            <table class="table">
+                                <tr>
+                                    <th scope="col">Diseases in graph</th>
+                                </tr>
+                                {% for mesh in mesh_terms %}
+                                    <tr>
+                                        <td>{{ mesh }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        </div>
+                        <div class="row justify-content-end">
+                            {% if last_update %}
+                                <p class="pull-right"><strong>Last update: {{ moment(last_update).format('LLL') }}
+                                    ({{ moment(last_update).fromNow() }})</strong></p>
+                            {% else %}
+                                <p class="pull-right"><strong>Last update: Never</strong></p>
+                            {% endif %}
+                        </div>
                         <br>
                         <div class="btn-group">
-                            <button id="add_disease" type="button" class="btn btn-default btn-lg"
+                            <button id="add_disease" type="button" class="btn btn-outline-primary btn-lg"
                                     data-toggle="collapse" data-target="#add_disease_form"
                                     aria-expanded="false" aria-controls="add_disease_form">
-                              <span class="glyphicon glyphicon-plus"></span> Add disease
+                                <span class="glyphicon glyphicon-plus"></span> Add disease
                             </button>
-                            <button id="update_literature_btn" type="button" class="btn btn-default btn-lg">
-                                <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update
+                            <button id="update_literature_btn" type="button"
+                                    class="btn btn-outline-primary btn-lg">
+                                Update
+                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-arrow-repeat"
+                                     fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"></path>
+                                    <path fill-rule="evenodd"
+                                          d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"></path>
+                                </svg>
                             </button>
                         </div>
-                        <div id="add_disease_form"  class="collapse multi-collapse">
+                        <div id="add_disease_form" class="collapse multi-collapse">
                             <br>
-                            {{ wtf.quick_form(form_literature) }}
+                            {{ render_form(form_literature) }}
                         </div>
                     </div>
                 </div>
             </div>
             <div class="col-md-6">
-                <div class="panel panel-primary">
-                    <div class="panel-heading"><h3>Structured resources</h3></div>
-                    <div id="struct_panel_body" class="panel-body">
-                        <table class="table" id="structTable">
-                            <tr>
-                                <th>Type</th>
-                                <th>Version</th>
-                                <th>Filename</th>
-                                <th>Added on</th>
-                                <th></th>
-                            </tr>
-                            {% for struct in structured_resources %}
-                            <tr>
-                                <td>{{struct['type']}}</td>
-                                <td>{{struct['version']}}</td>
-                                <td>{{struct['filename']}}</td>
-                                <td>{{ moment(struct['last_update']).format('LLL') }} ({{ moment(struct['last_update']).fromNow() }})</td>
-                                <td><button type="submit" class="btn removeButton">
-                                    <span class="glyphicon glyphicon-trash"></span></button></td>
-                            </tr>
-                            {% endfor %}
-                        </table>
-                        <button id="add_resource" type="button" class="btn btn-default btn-lg"
-                                data-toggle="collapse" data-target="#add_resource_forms"
-                                aria-expanded="false" aria-controls="add_resource_forms">
-                            <span class="glyphicon glyphicon-plus"></span> Add resource
-                        </button>
-                        <div id="add_resource_forms" class="collapse multi-collapse">
-                            <br>
-                            {{ wtf.quick_form(form_drugbank) }}
-                            <br>
-                            <p><strong>OR</strong></p>
-                            <br>
-                            {{ wtf.quick_form(form_obo) }}
+                <div class="card card-primary">
+                    <div class="card-header bg-primary"><h3>Structured resources</h3></div>
+                    <div id="struct_card_body" class="card-body">
+                        <div class="row">
+                            <table class="table" id="structTable">
+                                <tr>
+                                    <th scope="col">Type</th>
+                                    <th scope="col">Version</th>
+                                    <th scope="col">Filename</th>
+                                    <th scope="col">Added on</th>
+                                    <th scope="col"></th>
+                                </tr>
+                                {% for struct in structured_resources %}
+                                    <tr>
+                                        <td>{{ struct['type'] }}</td>
+                                        <td>{{ struct['version'] }}</td>
+                                        <td>{{ struct['filename'] }}</td>
+                                        <td>{{ moment(struct['last_update']).format('LLL') }}
+                                            ({{ moment(struct['last_update']).fromNow() }})
+                                        </td>
+                                        <td>
+                                            <button type="submit" class="btn removeButton align-items-center">
+                                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-trash"
+                                                     fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"></path>
+                                                    <path fill-rule="evenodd"
+                                                          d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4L4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"></path>
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                            <button id="add_resource" type="button"
+                                    class="btn btn-outline-primary btn-lg align-items-center"
+                                    data-toggle="collapse" data-target="#add_resource_forms"
+                                    aria-expanded="false" aria-controls="add_resource_forms">
+                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-plus-square"
+                                     fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                    <path fill-rule="evenodd"
+                                          d="M14 1H2a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1zM2 0a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                                    <path fill-rule="evenodd"
+                                          d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                                </svg>
+                                Add resource
+                            </button>
+                            <div id="add_resource_forms" class="collapse multi-collapse">
+                                <br>
+                                {{ render_form(form_drugbank) }}
+                                <br>
+                                <p><strong>OR</strong></p>
+                                <br>
+                                {{ render_form(form_obo) }}
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div id="admin-actions" class="row" >
+        <div id="admin-actions" class="row">
             <div class="col-md-12">
-                <div class="panel panel-primary">
-                    <div class="panel-heading"><h3>Admin actions</h3></div>
-                    <div class="panel-body">
-                        <button id="calculate_pagerank" type="button" class="btn btn-default btn-lg">
+                <div class="card card-primary">
+                    <div class="card-header bg-primary"><h3>Admin actions</h3></div>
+                    <div class="card-body">
+                        <button id="calculate_pagerank" type="button" class="btn btn-outline-primary btn-lg">
                             Calculate PageRank
                         </button>
                     </div>
                 </div>
             </div>
         </div>
-        <div id="job-status" class="row" >
+        <div id="job-status" class="row">
             <div class="col-md-12">
-                <div class="panel panel-primary">
-                    <div class="panel-heading"><h3>Jobs</h3></div>
-                    <div class="panel-body">
+                <div class="card card-primary">
+                    <div class="card-header bg-primary"><h3>Jobs</h3></div>
+                    <div class="card-body">
                         <table id="job-status-table" class="table table-hover">
                             <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Name</th>
-                                    <th>Status</th>
-                                    <th>Added on</th>
-                                    <th>By</th>
-                                </tr>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Status</th>
+                                <th>Added on</th>
+                                <th>By</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {% for job in jobs %}
+                            {% for job in jobs %}
                                 <tr data-toggle="tooltip"
                                     data-html="true"
                                     data-placement="bottom"
                                     title="<p><b> Inputs: </b> {{ job['task_inputs'] }}</p>">
-                                    <td>{{job['task_id']}}</td>
-                                    <td>{{job['task_name']}}</td>
+                                    <td>{{ job['task_id'] }}</td>
+                                    <td>{{ job['task_name'] }}</td>
                                     {% if job['status'] == "SUCCESS" %}
-                                    <td style="background: #0f590d; color: #0c0c0c">
-                                    {% elif job['status'] == "FAILURE" %}
-                                    <td style="background: #9C1A1C; color: #0c0c0c">
-                                    {% else %}
-                                    <td style="background: #df8505; color: #0c0c0c">
+                                        <td style="background: #0f590d; color: #0c0c0c">
+                                            {% elif job['status'] == "FAILURE" %}
+                                        <td style="background: #9C1A1C; color: #0c0c0c">
+                                            {% else %}
+                                        <td style="background: #df8505; color: #0c0c0c">
                                     {% endif %}
-                                        <strong>{{job['status']}}</strong>
+                                    <strong>{{ job['status'] }}</strong>
                                     </td>
-                                    <td>{{ moment(job['added_on']).format('LLL') }} ({{ moment(job['added_on']).fromNow() }})</td>
-                                    <td>{{job['user_email']}}</td>
+                                    <td>{{ moment(job['added_on']).format('LLL') }}
+                                        ({{ moment(job['added_on']).fromNow() }})
+                                    </td>
+                                    <td>{{ job['user_email'] }}</td>
                                 </tr>
-                                {% endfor %}
+                            {% endfor %}
                             </tbody>
                         </table>
                         <br>
-                        <a href="{{ url_for('admin.monitor_jobs') }}" class="btn btn-primary stretched-link pull-right">See all</a>
+                        <a href="{{ url_for('admin.monitor_jobs') }}" class="btn btn-primary stretched-link pull-right">See
+                            all</a>
                     </div>
                 </div>
             </div>
@@ -143,7 +182,7 @@
 {% endblock %}
 
 {% block scripts %}
-{{ super() }}
+    {{ super() }}
     <script type=text/javascript>
 
         const updateLiteratureBtn = $('#update_literature_btn');
@@ -152,39 +191,41 @@
 
         function update_literature() {
             updateLiteratureBtn.html('<img src="{{ url_for('static', filename='loading.gif') }}">');
-            $.post("{{ url_for('admin.update_literature') }}", function(data) {
+            $.post("{{ url_for('admin.update_literature') }}", function (data) {
                 let old_button = '<span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Update';
                 $('#update_literature_btn').html(old_button);
                 $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
             });
         }
+
         updateLiteratureBtn.click(update_literature);
-        $(document).ready(function(){
+        $(document).ready(function () {
             $('[data-toggle="tooltip"]').tooltip();
         });
 
         const calculatePagerankBtn = $('#calculate_pagerank');
+
         function calculate_pagerank() {
-            $.post("{{ url_for('admin.calculate_pagerank') }}", function(data) {
+            $.post("{{ url_for('admin.calculate_pagerank') }}", function (data) {
                 $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
             });
         }
+
         calculatePagerankBtn.click(calculate_pagerank);
 
-        $('#structTable').on('click', '.removeButton', function(events){
+        $('#structTable').on('click', '.removeButton', function (events) {
             let type = $(this).closest('tr').find('td').eq(0).html();
             let version = $(this).closest('tr').find('td').eq(1).html();
             let button = $(this);
-            $.post("{{ url_for('admin.remove_resource') }}", {type : type, version : version}, function(data) {
+            $.post("{{ url_for('admin.remove_resource') }}", {type: type, version: version}, function (data) {
                 if (data.return_code === 'SUCCESS') {
                     $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>');
                     button.closest('tr').remove();
-                }
-                else {
+                } else {
                     $('#content').prepend('<div class="alert alert-danger" role="alert">' + data.message + '</div>');
                 }
             });
-          });
+        });
 
     </script>
 {% endblock %}

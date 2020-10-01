@@ -13,8 +13,7 @@
         }
 
         circle {
-            stroke: #fff;
-            stroke-width: 1.5px;
+
         }
 
         table {
@@ -40,43 +39,48 @@
             display: table;
             table-layout: fixed;
         }
-
     </style>
 {% endblock %}
 
 {% block app_content %}
-    <h1>Graph Browser</h1>
-    <div>
-        <br>
-        <div id="resource-status" class="row">
-            <div class="col-md-12">
+
+    <div class="container-fluid">
+        <div class="d-flex flex-row">
+            <div class="p-2">
+                <h3>Graph Browser</h3>
+            </div>
+            <div class="p-2 flex-md-grow-1">
                 <input id="search" type="text" class="form-control" placeholder="Input search term">
             </div>
         </div>
         <br>
-        <div id="nodes_display" class="row">
-            <div id="toolbox" class="col-md-4">
+        <div class="row">
+            <div id="toolbox" class="col-lg-2">
             </div>
-            <div id="canvas" class="col-md-8">
+            <div id="canvas" class="col-lg-5 border rounded">
             </div>
-        </div>
-        <div id="articles_display" class="row">
-            <div class="panel panel-primary">
-                <div class="panel-heading"><h3>Mentioned in</h3></div>
-                <div id="struct_panel_body" class="panel-body table-responsive">
-                    <table class="table table-striped" id="articleTable">
-                        <thead>
-                        <tr>
-                            <th style="width: 10%">PMID</th>
-                            <th style="width: 70%">Title</th>
-                            <th style="width: 20%">Journal</th>
-                        </tr>
-                        </thead>
-                    </table>
+            <div id="articles_display" class="col-lg-5">
+                <div class="card card-primary">
+                    <div class="card-header bg-primary">
+                        <h3 id="term" class="card-title"></h3>
+                        <h4 class="card-title">mentioned in</h4>
+                    </div>
+                    <div id="struct_card_body" class="card-body table-responsive">
+                        <table class="table table-striped" id="articleTable">
+                            <thead>
+                            <tr>
+                                <th style="width: 15%">PMID</th>
+                                <th style="width: 60%">Title</th>
+                                <th style="width: 25%">Journal</th>
+                            </tr>
+                            </thead>
+                        </table>
+                    </div>
                 </div>
             </div>
-
         </div>
+
+
     </div>
 {% endblock %}
 
@@ -84,14 +88,15 @@
     {{ super() }}
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script src="https://d3js.org/d3.v6.min.js"></script>
-    <script type=text/javascript src="{{url_for('static', filename='semantic_types.js') }}"></script>
+    <script type=text/javascript src="{{ url_for('static', filename='semantic_types.js') }}"></script>
     <script type=text/javascript>
         let width = 500,
             height = 500;
-        let nodeSize = 20;
+        let nodeSize = 15;
 
-        let nodes = []
-        let links = []
+        let nodes = [];
+        let links = [];
+        let focus_node = null;
 
         let color = d3.scaleOrdinal(get_sem_types(),
             d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
@@ -103,14 +108,14 @@
         svg.append('defs').append('marker')
             .attr("id", "arrow")
             .attr("viewBox", '-0 -5 10 10')
-            .attr("refX", 13)
+            .attr("refX", 5)
             .attr("refY", 0)
             .attr("markerWidth", 13)
             .attr("markerHeight", 8)
             .attr("orient", 'auto')
             .attr("xoverflow", 'visible')
             .append('svg:path')
-            .attr('d', 'M 0,-5 L 10 ,0 L 0,5')
+            .attr('d', 'M 0,-5 L 5 ,0 L 0,5')
             .attr('fill', '#999')
             .style('stroke', 'none');
 
@@ -120,10 +125,8 @@
             .force("link", d3.forceLink(links).id(function (d) {
                 return d.id;
             }))
-            .force("charge", d3.forceManyBody().strength(-4000))
-            //.force("center", d3.forceCenter(width / 2, height / 2))
-            .force("x", d3.forceX())
-            .force("y", d3.forceY())
+            .force("charge", d3.forceManyBody().strength(-3000))
+            .force("center", d3.forceCenter(0, 0))
             .on("tick", ticked);
 
         const dragger = d3.drag(simulation)
@@ -149,14 +152,16 @@
 
                 pythag = Math.sqrt((deltaX * deltaX) + (deltaY * deltaY));
 
-                adjustedX = d.target.x - ((deltaX * nodeSize) / pythag);
-                adjustedY = d.target.y - ((deltaY * nodeSize) / pythag);
+                adjusted_source_X = d.source.x + ((deltaX * nodeSize) / pythag);
+                adjusted_source_Y = d.source.y + ((deltaY * nodeSize) / pythag);
+                adjusted_target_X = d.target.x - ((deltaX * nodeSize) / pythag);
+                adjusted_target_Y = d.target.y - ((deltaY * nodeSize) / pythag);
 
                 d3.select(this)
-                    .attr("x1", d.source.x)
-                    .attr("y1", d.source.y)
-                    .attr("x2", adjustedX)
-                    .attr("y2", adjustedY);
+                    .attr("x1", adjusted_source_X)
+                    .attr("y1", adjusted_source_Y)
+                    .attr("x2", adjusted_target_X)
+                    .attr("y2", adjusted_target_Y);
 
             });
 
@@ -195,6 +200,22 @@
             if (!event.active) simulation.alphaTarget(0);
             event.subject.fx = null;
             event.subject.fy = null;
+        }
+
+        function clicked(event, d) {
+            if (event.defaultPrevented) return; // dragged
+
+            if (focus_node != null) {
+                focus_node.attr("stroke", null);
+                focus_node.select(".node_circle").attr("stroke", "#fff");
+            }
+
+            focus_node = d3.select(this);
+            focus_node.attr("stroke", "black");
+            focus_node.select(".node_circle").attr("stroke", "black");
+            add_articles(d.label);
+            $("#term").html('<strong>' + d.label + '</strong>');
+
         }
 
         function createForceNetwork(in_nodes, edges) {
@@ -258,7 +279,8 @@
                 .join(
                     enter => enter.append("g")
                         .attr("class", "node")
-                        .call(dragger),
+                        .call(dragger)
+                        .on("click", clicked),
                     update => update,
                     exit => exit.remove()
                 );
@@ -269,7 +291,9 @@
                 .attr("class", "node_circle")
                 .attr("r", nodeSize)
                 .attr("fill", d => color(d.sem_types[0]))
-                .attr("fill-opacity", 0.9);
+                .attr("fill-opacity", 0.9)
+                .attr("stroke", "#fff")
+                .attr("stroke-width", "1.5px");
 
             cicle.append("title")
                 .text(function (d) {
@@ -300,6 +324,7 @@
         function plot(node_label) {
             $.post("{{url_for('main.graph')}}", {label: node_label})
                 .done(function (data) {
+                        $("#term").html('<strong>' + data.nodes[0].label + '</strong>');
                         createForceNetwork(data.nodes, data.links);
                     }
                 );
@@ -315,12 +340,12 @@
                         let newRow = tbody.insertRow(-1);
 
                         let pmidCell = newRow.insertCell(0);
-                        pmidCell.setAttribute("style", "width: 10%");
+                        pmidCell.setAttribute("style", "width: 15%");
                         let pmidText = document.createTextNode(pmid);
                         pmidCell.appendChild(pmidText);
 
                         let titleCell = newRow.insertCell(1);
-                        titleCell.setAttribute("style", "width: 70%");
+                        titleCell.setAttribute("style", "width: 60%");
                         let titleText = document.createTextNode(title);
                         titleCell.appendChild(titleText);
 
@@ -334,9 +359,10 @@
                         let link = document.createElement('a');
                         link.href = 'https://pubmed.ncbi.nlm.nih.gov/' + pmid;
                         link.setAttribute("target", "_blank");
-                        let span = document.createElement("SPAN");
-                        span.setAttribute("class", "glyphicon glyphicon-link");
-                        link.appendChild(span);
+                        link.innerHTML = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-link-45deg" fill="currentColor" xmlns="http://www.w3.org/2000/svg">\n' +
+                            '  <path d="M4.715 6.542L3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1.001 1.001 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4.018 4.018 0 0 1-.128-1.287z"/>\n' +
+                            '  <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 0 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 0 0-4.243-4.243L6.586 4.672z"/>\n' +
+                            '</svg>';
                         linkCell.appendChild(link);
                     }
 

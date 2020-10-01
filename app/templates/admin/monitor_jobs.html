@@ -1,14 +1,15 @@
 {% extends 'base.html' %}
 
 {% block app_content %}
-    <h1>Job monitor</h1>
-    <div>
-        <h2>Status</h2>
+    <div class="container">
+        <h1>Job monitor</h1>
         <div id="job-status" class="row" >
             <div class="col-md-12">
-                <div class="panel panel-primary">
-                    <div class="panel-heading"><h3>Jobs</h3></div>
-                    <div class="panel-body">
+                <div class="card">
+                    <div class="card-header bg-primary">
+                        <h2 class="card-title">Jobs</h2>
+                    </div>
+                    <div class="card-body bg-transparent">
                         <table id="job-status-table" class="table table-hover">
                             <thead>
                                 <tr>
