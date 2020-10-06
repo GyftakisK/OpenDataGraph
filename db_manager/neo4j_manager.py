@@ -42,18 +42,26 @@ class NeoManager(object):
                 "YIELD graphName, nodeCount, relationshipCount".format(graph_name=graph_name)
         self._run_query(query)
 
+    def create_entity_only_in_memory_graph(self, graph_name: str):
+        query = f"CALL gds.graph.create.cypher('{graph_name}', " \
+                f"'MATCH (n:Entity)--(:Entity) RETURN DISTINCT id(n) AS id', " \
+                f"'MATCH (n:Entity)--(m:Entity) RETURN id(n) AS source, id(m) AS target')"
+        self._run_query(query)
+
     def drop_in_memory_graph(self, graph_name: str):
-        query = "CALL gds.graph.drop('{graph_name}') YIELD graphName;".format(graph_name=graph_name)
+        query = f"CALL gds.graph.drop('{graph_name}') YIELD graphName;"
         self._run_query(query)
 
     def calculate_pagerank(self, graph_name: str, max_iterations: int, damping_factor: float):
-        query = "CALL gds.pageRank.write('{graph_name}', " \
-                    "{{ maxIterations: {max_iterations}, " \
-                    "dampingFactor: {damping_factor}, " \
-                    "writeProperty: 'pagerank'}}) " \
-                "YIELD nodePropertiesWritten, ranIterations".format(graph_name=graph_name,
-                                                                    max_iterations=max_iterations,
-                                                                    damping_factor=damping_factor)
+        query = f"CALL gds.pageRank.write('{graph_name}', " \
+                f"{{ maxIterations: {max_iterations}, " \
+                f"dampingFactor: {damping_factor}, " \
+                f"writeProperty: 'pagerank'}}) " \
+                f"YIELD nodePropertiesWritten, ranIterations"
+        self._run_query(query)
+
+    def calculate_node2vec(self, graph_name: str):
+        query = f"CALL gds.alpha.node2vec.write('{graph_name}', {{writeProperty: 'node2vec'}})"
         self._run_query(query)
 
     def get_entities_matching_labels_beginning(self, search_string: str, limit: int):

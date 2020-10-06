@@ -122,10 +122,13 @@
         <div id="admin-actions" class="row">
             <div class="col-md-12">
                 <div class="card card-primary">
-                    <div class="card-header bg-primary"><h3>Admin actions</h3></div>
+                    <div class="card-header bg-primary"><h3 class="card-title">Admin actions</h3></div>
                     <div class="card-body">
                         <button id="calculate_pagerank" type="button" class="btn btn-outline-primary btn-lg">
                             Calculate PageRank
+                        </button>
+                        <button id="calculate_node2vec" type="button" class="btn btn-outline-primary btn-lg">
+                            Calculate Node2Vec
                         </button>
                     </div>
                 </div>
@@ -199,6 +202,7 @@
         }
 
         updateLiteratureBtn.click(update_literature);
+
         $(document).ready(function () {
             $('[data-toggle="tooltip"]').tooltip();
         });
@@ -212,6 +216,16 @@
         }
 
         calculatePagerankBtn.click(calculate_pagerank);
+
+        const calculateNode2vecBtn = $('#calculate_node2vec');
+
+        function calculate_node2vec() {
+            $.post("{{ url_for('admin.calculate_node2vec') }}", function (data) {
+                $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
+            });
+        }
+
+        calculateNode2vecBtn.click(calculate_node2vec);
 
         $('#structTable').on('click', '.removeButton', function (events) {
             let type = $(this).closest('tr').find('td').eq(0).html();

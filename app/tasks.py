@@ -37,3 +37,9 @@ def remove_structured_resource(resource_type, version):
 def calculate_pagerank_task():
     with current_app.app_context():
         extractor.calculate_pagerank()
+
+
+@celery.task(queue="jobsQueue")
+def calculate_node2vec_task():
+    with current_app.app_context():
+        extractor.calculate_node2vec()

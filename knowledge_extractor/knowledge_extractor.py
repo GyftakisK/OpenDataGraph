@@ -191,12 +191,20 @@ class KnowledgeExtractor:
 
     def calculate_pagerank(self, max_iterations: int = 50, damping_factor: float = 0.85):
         """
-        Method to calculate pagerank across the whole graph
+        Method to calculate pagerank across all connected entities
         """
-        self._neo4j_manager.create_in_memory_graph('pagerank_graph')
+        self._neo4j_manager.create_entity_only_in_memory_graph('pagerank_graph')
         self._neo4j_manager.calculate_pagerank('pagerank_graph', max_iterations=max_iterations,
                                                damping_factor=damping_factor)
         self._neo4j_manager.drop_in_memory_graph('pagerank_graph')
+
+    def calculate_node2vec(self):
+        """
+        Method to calculate node2vec across the whole graph
+        """
+        self._neo4j_manager.create_in_memory_graph('node2vec_graph')
+        self._neo4j_manager.calculate_node2vec('node2vec_graph')
+        self._neo4j_manager.drop_in_memory_graph('node2vec_graph')
 
     @staticmethod
     def _get_num_of_cores() -> int:
