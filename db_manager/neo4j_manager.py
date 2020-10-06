@@ -67,13 +67,13 @@ class NeoManager(object):
                 f"WHERE n.label = '{node_label}' " \
                 f"RETURN n"
         result = self._run_query(query)
-        node = result.data()[-1]["n"]
+        node = next(result)["n"]
 
         query = f"MATCH (n:Entity)-[r]-(:Entity) " \
                 f"WHERE n.label = '{node_label}' " \
                 f"RETURN r LIMIT {num_of_neighbors}"
         result = self._run_query(query)
-        return node, [record["r"] for record in result.data()]
+        return node, [record["r"] for record in result]
 
     def get_articles_for_entity(self, node_label: str):
         query = f"MATCH(n: Entity)-[r]-(m:Article) " \
@@ -83,4 +83,11 @@ class NeoManager(object):
         return [{"pmid": record["m.id"],
                  "title": record["m.title"],
                  "journal": record["m.journal"],
-                 "rel": record["rel"]} for record in result.data()]
+                 "rel": record["rel"]} for record in result]
+
+    def get_all_relationships_between_nodes_by_cui(self, cui_1, cui_2):
+        query = f"MATCH (n:Entity)-[r]-(m:Entity) " \
+                f"WHERE n.id = '{cui_1}' AND m.id = '{cui_2}' " \
+                f"RETURN r"
+        result = self._run_query(query)
+        return [record["r"] for record in result]

@@ -44,7 +44,7 @@ def relationships_to_d3_data(query_node, relationships):
 
     links = []
 
-    for relationship in relationships:
+    for relationship in set(relationships):
         start_node = relationship.start_node
         end_node = relationship.end_node
         for node in (start_node, end_node):

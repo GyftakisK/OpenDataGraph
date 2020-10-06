@@ -29,15 +29,27 @@ def autocomplete():
 
 @bp.route('/graph', methods=['POST'])
 def graph():
-    node_label = request.form.get('label')
-    host = os.environ.get('NEO4J_HOST')
-    port = os.environ.get('NEO4J_PORT')
-    user = os.environ.get('NEO4J_USER')
-    password = os.environ.get('NEO4J_PASS')
-    node, relationships = NeoManager(host, port, user, password).get_node_and_neighbors(node_label, 10)
-    data = relationships_to_d3_data(node, relationships)
-    data["query_node_id"] = node.identity
-    return jsonify(data)
+    req_data = request.get_json()
+    if req_data:
+        node_label = req_data['label']
+        frozen_sets = req_data['frozen']
+        print()
+        print("************")
+        print(frozen_sets)
+        print("************")
+        print()
+
+        db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'), os.environ.get('NEO4J_USER'),
+                                os.environ.get('NEO4J_PASS'))
+        node, relationships = db_manager.get_node_and_neighbors(node_label, 10)
+        if frozen_sets:
+            for cui_1, cui_2 in frozen_sets:
+                relationships.extend(db_manager.get_all_relationships_between_nodes_by_cui(cui_1, cui_2))
+        data = relationships_to_d3_data(node, relationships)
+        data["query_node_id"] = node.identity
+        return jsonify(data)
+    else:
+        return "Invalid term"
 
 
 @bp.route('/articles', methods=['POST'])
