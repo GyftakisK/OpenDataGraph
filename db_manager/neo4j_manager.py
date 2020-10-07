@@ -83,15 +83,37 @@ class NeoManager(object):
         result = self._run_query(query)
         return node, [record["r"] for record in result]
 
+    def get_neighbor_stats_for_node(self, node_label: str):
+        query = f"MATCH (n:Entity)-[relationship]-(:Entity) " \
+                f"WHERE n.label = '{node_label}' " \
+                f"RETURN TYPE(relationship) AS type, COUNT(relationship) AS amount"
+        result = self._run_query(query)
+        relationship_counts = {record["type"]: record["amount"] for record in result}
+
+        query = f"MATCH (n:Entity)-[relationship]-(m:Entity) " \
+                f"WHERE n.label = '{node_label}' " \
+                f"RETURN collect(m.sem_types) AS sem_types"
+        result = self._run_query(query)
+        sem_types_counts = {}
+        for _list in next(result)["sem_types"]:
+            for sem_type in _list:
+                if sem_type in sem_types_counts:
+                    sem_types_counts[sem_type] += 1
+                else:
+                    sem_types_counts[sem_type] = 1
+
+        return relationship_counts, sem_types_counts
+
     def get_articles_for_entity(self, node_label: str):
         query = f"MATCH(n: Entity)-[r]-(m:Article) " \
                 f"WHERE n.label = '{node_label}' " \
-                f"RETURN m.id, m.title, m.journal, type(r) AS rel"
+                f"RETURN m.id, m.title, m.journal, type(r) AS rel, count(r.sent_id) AS occurrences"
         result = self._run_query(query)
         return [{"pmid": record["m.id"],
                  "title": record["m.title"],
                  "journal": record["m.journal"],
-                 "rel": record["rel"]} for record in result]
+                 "rel": record["rel"],
+                 "occurrences": record["occurrences"]} for record in result]
 
     def get_all_relationships_between_nodes_by_cui(self, cui_1, cui_2):
         query = f"MATCH (n:Entity)-[r]-(m:Entity) " \

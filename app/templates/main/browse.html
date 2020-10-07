@@ -39,6 +39,11 @@
             display: table;
             table-layout: fixed;
         }
+
+        div.checkboxes-grp {
+            height: 200px;
+            overflow-y: scroll;
+        }
     </style>
 {% endblock %}
 
@@ -55,9 +60,39 @@
         </div>
         <br>
         <div class="row">
-            <div id="toolbox" class="col-lg-2">
+            <div id="toolbox" class="col-lg-2 border rounded">
+                <div class="row">
+                    <label for="relationshipTypes">Relationship types</label>
+                    <div id="relationshipTypes" class="border checkboxes-grp" style="width: 100%">
+                    </div>
+                </div>
+                <div class="row">
+                    <label for="semanticTypes">Semantic types</label>
+                    <div id="semanticTypes" class="border checkboxes-grp" style="width: 100%">
+                    </div>
+                </div>
+                <div class="row">
+                    <label class="" for="numOfNeighbors">Number of neighbors</label>
+                    <input type="number" class="form-control" id="numOfNeighbors" value="10" step="1">
+                </div>
+                <br>
+                <div class="row justify-content-end">
+                    <button class="btn btn-primary">Apply</button>
+                </div>
             </div>
-            <div id="canvas" class="col-lg-5 border rounded">
+            <div class="col-lg-5 border rounded">
+                <div class="row">
+                    <button id="expandButton" class="btn btn-light btn-sm" disabled>
+                        Expand node
+                    </button>
+                    <button id="deflateButton" class="btn btn-light btn-sm" disabled>
+                        Deflate node
+                    </button>
+                    <button id="nextNodesButton" class="btn btn-light btn-sm" disabled>
+                        Get next nodes
+                    </button>
+                </div>
+                <div class="row" id="canvas"></div>
             </div>
             <div id="articlesDisplay" class="col-lg-5">
                 <div class="card card-primary">
@@ -71,13 +106,15 @@
                             <thead>
                             <tr>
                                 <th style="width: 15%">PMID</th>
-                                <th style="width: 60%">Title</th>
-                                <th style="width: 25%">Journal</th>
+                                <th style="width: 55%">Title</th>
+                                <th style="width: 15%">Journal</th>
+                                <th style="width: 15%">Mentions</th>
+                                <th style="width: 5%"></th>
                             </tr>
                             </thead>
                         </table>
                         <div class="d-flex flex-row-reverse">
-                            <p class="p-2"><em>* highlighted articles include term as topic</em></p>
+                            <p class="p-2"><em>* highlighted articles are annotated with the term as topic</em></p>
                         </div>
 
                     </div>
@@ -101,8 +138,13 @@
 
         let nodes = [];
         let links = [];
-        let frozen_sets = new Map();
+        let frozen_sets = [];
         let focus_node = null;
+
+        const expandButton = $('#expandButton');
+        expandButton.prop('disabled', true);
+        const deflateButton = $('#deflateButton');
+        deflateButton.prop('disabled', true);
 
         let color = d3.scaleOrdinal(get_sem_types(),
             d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
@@ -130,8 +172,8 @@
         let simulation = d3.forceSimulation(nodes)
             .force("link", d3.forceLink(links).id(function (d) {
                 return d.id;
-            }))
-            .force("charge", d3.forceManyBody().strength(-1000))
+            }).distance(120).strength(1))
+            .force("charge", d3.forceManyBody().strength(-100))
             .force("center", d3.forceCenter(0, 0))
             .on("tick", ticked);
 
@@ -212,33 +254,27 @@
             if (event.defaultPrevented) return; // dragged
 
             if (focus_node != null) {
-                focus_node.attr("stroke", null);
-                focus_node.select(".node_circle").attr("stroke", "#fff");
+                focus_node.node.select(".node_circle").attr("stroke", "#fff");
             }
 
-            focus_node = d3.select(this);
-            focus_node.attr("stroke", "black");
-            focus_node.select(".node_circle").attr("stroke", "black");
+            focus_node = {"data": d, "node": d3.select(this)};
+
+            focus_node.node.select(".node_circle").attr("stroke", "black");
             update_info(d);
             add_articles(d.label);
+            expandButton.prop('disabled', false);
         }
 
-        function dblclicked(event, d) {
-            if (event.defaultPrevented) return; // dragged
+        expandButton.click(expand_node);
 
-            if (focus_node != null) {
-                focus_node.attr("stroke", null);
-                focus_node.select(".node_circle").attr("stroke", "#fff");
+        function expand_node() {
+            if (focus_node.data.cui > nodes[0].cui) {
+                frozen_sets.push([nodes[0].cui, focus_node.data.cui]);
+            } else {
+                frozen_sets.push([focus_node.data.cui, nodes[0].cui]);
             }
 
-            if (d.cui > nodes[0].cui) {
-                frozen_sets.set(nodes[0].cui, d.cui);
-            }
-            else {
-                frozen_sets.set(d.cui, nodes[0].cui);
-            }
-
-            plot(d.label);
+            plot(focus_node.data.label);
         }
 
         function createForceNetwork(in_nodes, edges) {
@@ -302,8 +338,7 @@
                     enter => enter.append("g")
                         .attr("class", "node")
                         .call(dragger)
-                        .on("click", clicked)
-                        .on("dblclick", dblclicked),
+                        .on("click", clicked),
                     update => update,
                     exit => exit.remove()
                 );
@@ -344,17 +379,41 @@
             });
         }
 
+        function update_toolbox(relationship_counts, sem_types_counts) {
+            relationships_box = $("#relationshipTypes");
+            relationships_box.empty();
+            for (const [name, count] of Object.entries(relationship_counts)) {
+                relationships_box.append('<div class="form-check">' +
+                    '<input class="form-check-input" type="checkbox" id="' + name + 'Check" checked>' +
+                    '<label class="form-check-label" for="' + name + 'Check">' + name + ' (' + count + ')</label></div>');
+            }
+
+            semantics_box = $("#semanticTypes");
+            semantics_box.empty();
+            for (const [name, count] of Object.entries(sem_types_counts)) {
+                semantics_box.append('<div class="form-check">' +
+                    '<input class="form-check-input" type="checkbox" id="' + name + 'Checkbox" checked>' +
+                    '<label class="form-check-label" style="color:' + color(name) + 'for="' + name + 'Checkbox">' +
+                    sem_type_abrv_to_text(name) + ' (' + count + ')</label></div>');
+            }
+        }
+
         function plot(node_label) {
             $.ajax({
                 type: "POST",
                 url: "{{url_for('main.graph')}}",
-                data: JSON.stringify({"label": node_label,
-                    "frozen": Array.from(frozen_sets)}),
+                data: JSON.stringify({
+                    "label": node_label,
+                    "frozen": frozen_sets
+                }),
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function (data) {
-                                            update_info(data.nodes[0])
-                        createForceNetwork(data.nodes, data.links);
+                    update_info(data.nodes[0]);
+                    update_toolbox(data.relationship_counts, data.sem_types_counts);
+                    createForceNetwork(data.nodes, data.links);
+                    deflateButton.prop('disabled', true);
+                    expandButton.prop('disabled', true);
                 },
                 error: function (errMsg) {
                     alert(errMsg);
@@ -389,7 +448,7 @@
         function add_articles(node_label) {
             $.post("{{url_for('main.articles')}}", {label: node_label})
                 .done(function (data) {
-                    function addArticleRow(pmid, title, journal, rel) {
+                    function addArticleRow(pmid, title, journal, rel, occurrences) {
                         // Get a reference to the table
                         let tbody = document.getElementById("articleTableBody");
 
@@ -404,7 +463,7 @@
                         pmidCell.appendChild(pmidText);
 
                         let titleCell = newRow.insertCell(1);
-                        titleCell.setAttribute("style", "width: 60%");
+                        titleCell.setAttribute("style", "width: 55%");
                         let titleText = document.createTextNode(title);
                         titleCell.appendChild(titleText);
 
@@ -413,7 +472,12 @@
                         let journalText = document.createTextNode(journal);
                         journalCell.appendChild(journalText);
 
-                        let linkCell = newRow.insertCell(3);
+                        let occurencesCell = newRow.insertCell(3);
+                        occurencesCell.setAttribute("style", "width: 10%");
+                        let occurencesText = document.createTextNode(occurrences);
+                        occurencesCell.appendChild(occurencesText);
+
+                        let linkCell = newRow.insertCell(4);
                         linkCell.setAttribute("style", "width: 5%");
                         let link = document.createElement('a');
                         link.href = 'https://pubmed.ncbi.nlm.nih.gov/' + pmid;
@@ -434,7 +498,7 @@
                     newBody.setAttribute("id", "articleTableBody");
                     tableRef.appendChild(newBody);
                     data.forEach(element => addArticleRow(element.pmid, element.title,
-                        element.journal, element.rel));
+                        element.journal, element.rel, element.occurrences));
                 });
         }
 
@@ -448,7 +512,7 @@
             },
             minLength: 2,
             select: function (event, ui) {
-                frozen_sets.clear();
+                frozen_sets = [];
                 plot(ui.item.value);
                 add_articles(ui.item.value);
             }

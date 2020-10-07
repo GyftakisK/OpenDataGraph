@@ -47,6 +47,9 @@ def graph():
                 relationships.extend(db_manager.get_all_relationships_between_nodes_by_cui(cui_1, cui_2))
         data = relationships_to_d3_data(node, relationships)
         data["query_node_id"] = node.identity
+        relationship_counts, sem_types_counts = db_manager.get_neighbor_stats_for_node(node_label)
+        data["relationship_counts"] = relationship_counts
+        data["sem_types_counts"] = sem_types_counts
         return jsonify(data)
     else:
         return "Invalid term"
