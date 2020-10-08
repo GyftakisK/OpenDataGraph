@@ -135,16 +135,20 @@
         let width = 500,
             height = 500;
         let nodeSize = 15;
+        let skip_nodes = 0;
 
         let nodes = [];
         let links = [];
         let frozen_sets = [];
         let focus_node = null;
+        let expanded_node = null;
 
         const expandButton = $('#expandButton');
         expandButton.prop('disabled', true);
         const deflateButton = $('#deflateButton');
         deflateButton.prop('disabled', true);
+        const nextNodesButton = $('#nextNodesButton');
+        nextNodesButton.prop('disabled', true);
 
         let color = d3.scaleOrdinal(get_sem_types(),
             d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
@@ -273,8 +277,7 @@
             } else {
                 frozen_sets.push([focus_node.data.cui, nodes[0].cui]);
             }
-
-            plot(focus_node.data.label);
+            plot(focus_node.data.label, frozen_sets, $('#numOfNeighbors').val(), 0);
         }
 
         function createForceNetwork(in_nodes, edges) {
@@ -398,27 +401,45 @@
             }
         }
 
-        function plot(node_label) {
+
+        function plot(node_label, frozen, neighbors, skip) {
+            console.log(skip)
             $.ajax({
                 type: "POST",
                 url: "{{url_for('main.graph')}}",
                 data: JSON.stringify({
                     "label": node_label,
-                    "frozen": frozen_sets
+                    "frozen": frozen,
+                    "number_of_neighbours": neighbors,
+                    "skip_nodes": skip
                 }),
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
                 success: function (data) {
+                    expanded_node = data.nodes[0];
                     update_info(data.nodes[0]);
                     update_toolbox(data.relationship_counts, data.sem_types_counts);
                     createForceNetwork(data.nodes, data.links);
                     deflateButton.prop('disabled', true);
                     expandButton.prop('disabled', true);
+                    if (data.skip_nodes < data.total_relationships) {
+                        nextNodesButton.prop('disabled', false);
+                    }
+                    else {
+                        nextNodesButton.prop('disabled', true);
+                    }
+                    skip_nodes = data.skip_nodes;
                 },
                 error: function (errMsg) {
                     alert(errMsg);
                 }
             });
+        }
+
+        nextNodesButton.click(getNextNodes)
+
+        function getNextNodes() {
+            plot(expanded_node.label, frozen_sets, $('#numOfNeighbors').val(), skip_nodes);
         }
 
         function update_info(node) {
@@ -513,7 +534,7 @@
             minLength: 2,
             select: function (event, ui) {
                 frozen_sets = [];
-                plot(ui.item.value);
+                skip_nodes = plot(ui.item.value, frozen_sets, $('#numOfNeighbors').val(), 0);
                 add_articles(ui.item.value);
             }
         });

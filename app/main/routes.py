@@ -1,4 +1,5 @@
 import os
+import functools
 from app.main import bp
 from flask import render_template, request, jsonify
 from db_manager.neo4j_manager import NeoManager
@@ -33,15 +34,13 @@ def graph():
     if req_data:
         node_label = req_data['label']
         frozen_sets = req_data['frozen']
-        print()
-        print("************")
-        print(frozen_sets)
-        print("************")
-        print()
+        number_of_neighbours = req_data['number_of_neighbours']
+        skip_nodes = req_data['skip_nodes']
 
         db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'), os.environ.get('NEO4J_USER'),
                                 os.environ.get('NEO4J_PASS'))
-        node, relationships = db_manager.get_node_and_neighbors(node_label, 10)
+        node, relationships = db_manager.get_node_and_neighbors(node_label, number_of_neighbours, skip_nodes)
+        skip_nodes = skip_nodes + len(relationships)
         if frozen_sets:
             for cui_1, cui_2 in frozen_sets:
                 relationships.extend(db_manager.get_all_relationships_between_nodes_by_cui(cui_1, cui_2))
@@ -50,6 +49,9 @@ def graph():
         relationship_counts, sem_types_counts = db_manager.get_neighbor_stats_for_node(node_label)
         data["relationship_counts"] = relationship_counts
         data["sem_types_counts"] = sem_types_counts
+        data['skip_nodes'] = skip_nodes
+        data["total_relationships"] = functools.reduce((lambda a, b: a + b),
+                                                       [count for count in relationship_counts.values()])
         return jsonify(data)
     else:
         return "Invalid term"
