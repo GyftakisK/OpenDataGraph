@@ -77,7 +77,7 @@
                 </div>
                 <br>
                 <div class="row justify-content-end">
-                    <button class="btn btn-primary">Apply</button>
+                    <button class="btn btn-primary" id="applyButton">Apply</button>
                 </div>
             </div>
             <div class="col-lg-5 border rounded">
@@ -85,7 +85,7 @@
                     <button id="expandButton" class="btn btn-light btn-sm" disabled>
                         Expand node
                     </button>
-                    <button id="deflateButton" class="btn btn-light btn-sm" disabled>
+                    <button id="deflateButton" class="btn btn-light btn-sm" disabled style="display: none">
                         Deflate node
                     </button>
                     <button id="nextNodesButton" class="btn btn-light btn-sm" disabled>
@@ -149,6 +149,7 @@
         deflateButton.prop('disabled', true);
         const nextNodesButton = $('#nextNodesButton');
         nextNodesButton.prop('disabled', true);
+        const applyButton = $('#applyButton');
 
         let color = d3.scaleOrdinal(get_sem_types(),
             d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
@@ -277,7 +278,8 @@
             } else {
                 frozen_sets.push([focus_node.data.cui, nodes[0].cui]);
             }
-            plot(focus_node.data.label, frozen_sets, $('#numOfNeighbors').val(), 0);
+            let excluded = get_not_checked_boxes();
+            plot(focus_node.data.label, frozen_sets, $('#numOfNeighbors').val(), 0, excluded[0], excluded[1]);
         }
 
         function createForceNetwork(in_nodes, edges) {
@@ -387,7 +389,7 @@
             relationships_box.empty();
             for (const [name, count] of Object.entries(relationship_counts)) {
                 relationships_box.append('<div class="form-check">' +
-                    '<input class="form-check-input" type="checkbox" id="' + name + 'Check" checked>' +
+                    '<input class="form-check-input rel-checkbox" type="checkbox" id="' + name + '" checked>' +
                     '<label class="form-check-label" for="' + name + 'Check">' + name + ' (' + count + ')</label></div>');
             }
 
@@ -395,15 +397,14 @@
             semantics_box.empty();
             for (const [name, count] of Object.entries(sem_types_counts)) {
                 semantics_box.append('<div class="form-check">' +
-                    '<input class="form-check-input" type="checkbox" id="' + name + 'Checkbox" checked>' +
-                    '<label class="form-check-label" style="color:' + color(name) + 'for="' + name + 'Checkbox">' +
+                    '<input class="form-check-input sem-checkbox" type="checkbox" id="' + name + '" checked>' +
+                    '<label class="form-check-label" style=\'color:' + color(name) + '\' for="' + name + 'Checkbox">' +
                     sem_type_abrv_to_text(name) + ' (' + count + ')</label></div>');
             }
         }
 
 
-        function plot(node_label, frozen, neighbors, skip) {
-            console.log(skip)
+        function plot(node_label, frozen, neighbors, skip, excl_rel, excl_sem_types) {
             $.ajax({
                 type: "POST",
                 url: "{{url_for('main.graph')}}",
@@ -411,7 +412,9 @@
                     "label": node_label,
                     "frozen": frozen,
                     "number_of_neighbours": neighbors,
-                    "skip_nodes": skip
+                    "skip_nodes": skip,
+                    "excluded_relationships": excl_rel,
+                    "excluded_semantic_types": excl_sem_types,
                 }),
                 contentType: "application/json; charset=utf-8",
                 dataType: "json",
@@ -424,8 +427,7 @@
                     expandButton.prop('disabled', true);
                     if (data.skip_nodes < data.total_relationships) {
                         nextNodesButton.prop('disabled', false);
-                    }
-                    else {
+                    } else {
                         nextNodesButton.prop('disabled', true);
                     }
                     skip_nodes = data.skip_nodes;
@@ -436,10 +438,38 @@
             });
         }
 
-        nextNodesButton.click(getNextNodes)
+        applyButton.click(applySettings);
+
+        function get_not_checked_boxes() {
+            let excluded_relationships = []
+            for (let inputElement of $(".rel-checkbox")) {
+                if (!inputElement.checked) {
+                    excluded_relationships.push(inputElement.id);
+                }
+            }
+            let excluded_semantic_types = []
+            for (let inputElement of $(".sem-checkbox")) {
+                if (!inputElement.checked) {
+                    excluded_semantic_types.push(inputElement.id);
+                }
+            }
+
+            return [excluded_relationships, excluded_semantic_types];
+        }
+
+        function applySettings() {
+            let excluded = get_not_checked_boxes();
+
+            plot(expanded_node.label, frozen_sets, $('#numOfNeighbors').val(), 0,
+                excluded[0], excluded[1])
+        }
+
+
+        nextNodesButton.click(getNextNodes);
 
         function getNextNodes() {
-            plot(expanded_node.label, frozen_sets, $('#numOfNeighbors').val(), skip_nodes);
+            let excluded = get_not_checked_boxes();
+            plot(expanded_node.label, frozen_sets, $('#numOfNeighbors').val(), skip_nodes, excluded[0], excluded[1]);
         }
 
         function update_info(node) {
@@ -534,7 +564,7 @@
             minLength: 2,
             select: function (event, ui) {
                 frozen_sets = [];
-                skip_nodes = plot(ui.item.value, frozen_sets, $('#numOfNeighbors').val(), 0);
+                plot(ui.item.value, frozen_sets, $('#numOfNeighbors').val(), 0, [], []);
                 add_articles(ui.item.value);
             }
         });

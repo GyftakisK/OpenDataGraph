@@ -71,16 +71,21 @@ class NeoManager(object):
         return [node["label"] for node in result]
 
     def get_node_and_neighbors(self, node_label: str, num_of_neighbors: int, skip_nodes: int,
-                               order_by: str = 'pagerank'):
+                               order_by: str = 'pagerank', excl_rel: list = [], excl_sem: list = []):
         query = f"MATCH (n:Entity) " \
                 f"WHERE n.label = '{node_label}' " \
                 f"RETURN n"
         result = self._run_query(query)
         node = next(result)["n"]
 
-        query = f"MATCH (n:Entity)-[r]-(m:Entity) " \
-                f"WHERE n.label = '{node_label}' " \
-                f"RETURN r ORDER BY m.{order_by} SKIP {skip_nodes} LIMIT {num_of_neighbors}"
+        query = "MATCH (n:Entity)-[r]-(m:Entity) " \
+                "WHERE n.label = '{node_label}' AND NOT TYPE(r) IN {excl_rel} " \
+                "RETURN r ORDER BY m.{order_by} " \
+                "SKIP {skip_nodes} LIMIT {num_of_neighbors}".format(node_label=node_label,
+                                                                    excl_rel=excl_rel,
+                                                                    order_by=order_by,
+                                                                    skip_nodes=skip_nodes,
+                                                                    num_of_neighbors=num_of_neighbors)
         result = self._run_query(query)
         return node, [record["r"] for record in result]
 

@@ -36,10 +36,16 @@ def graph():
         frozen_sets = req_data['frozen']
         number_of_neighbours = req_data['number_of_neighbours']
         skip_nodes = req_data['skip_nodes']
+        excl_rel = req_data["excluded_relationships"]
+        excl_sem = req_data["excluded_semantic_types"]
 
         db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'), os.environ.get('NEO4J_USER'),
                                 os.environ.get('NEO4J_PASS'))
-        node, relationships = db_manager.get_node_and_neighbors(node_label, number_of_neighbours, skip_nodes)
+        node, relationships = db_manager.get_node_and_neighbors(node_label=node_label,
+                                                                num_of_neighbors=number_of_neighbours,
+                                                                skip_nodes=skip_nodes,
+                                                                excl_rel=excl_rel,
+                                                                excl_sem=excl_sem)
         skip_nodes = skip_nodes + len(relationships)
         if frozen_sets:
             for cui_1, cui_2 in frozen_sets:
