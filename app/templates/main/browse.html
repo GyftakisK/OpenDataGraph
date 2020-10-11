@@ -73,7 +73,7 @@
                 </div>
                 <div class="row">
                     <label class="" for="numOfNeighbors">Number of neighbors</label>
-                    <input type="number" class="form-control" id="numOfNeighbors" value="10" step="1">
+                    <input type="number" class="form-control" id="numOfNeighbors" value="10" step="1" min="1" max="15">
                 </div>
                 <br>
                 <div class="row justify-content-end">
@@ -136,6 +136,9 @@
             height = 500;
         let nodeSize = 15;
         let skip_nodes = 0;
+        let total_nodes = 0;
+        let relationship_counts = null;
+        let sem_type_counts = null;
 
         let nodes = [];
         let links = [];
@@ -151,8 +154,7 @@
         nextNodesButton.prop('disabled', true);
         const applyButton = $('#applyButton');
 
-        let color = d3.scaleOrdinal(get_sem_types(),
-            d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
+        let color = d3.scaleOrdinal(get_sem_types(), d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
 
         const svg = d3.create("svg")
             .property("value", {nodes: [], links: []})
@@ -255,7 +257,7 @@
             event.subject.fy = null;
         }
 
-        function clicked(event, d) {
+        function clickedNode(event, d) {
             if (event.defaultPrevented) return; // dragged
 
             if (focus_node != null) {
@@ -278,8 +280,8 @@
             } else {
                 frozen_sets.push([focus_node.data.cui, nodes[0].cui]);
             }
-            let excluded = get_not_checked_boxes();
-            plot(focus_node.data.label, frozen_sets, $('#numOfNeighbors').val(), 0, excluded[0], excluded[1]);
+            get_node_stats(focus_node.data.label);
+            plot(focus_node.data.label, frozen_sets, $('#numOfNeighbors').val(), 0, [], []);
         }
 
         function createForceNetwork(in_nodes, edges) {
@@ -343,7 +345,7 @@
                     enter => enter.append("g")
                         .attr("class", "node")
                         .call(dragger)
-                        .on("click", clicked),
+                        .on("click", clickedNode),
                     update => update,
                     exit => exit.remove()
                 );
@@ -403,6 +405,28 @@
             }
         }
 
+        function get_node_stats(node_label) {
+            $.ajax({
+                type: "POST",
+                url: "{{url_for('main.node')}}",
+                data: JSON.stringify({
+                    "label": node_label
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    update_toolbox(data.relationship_counts, data.sem_types_counts);
+                    relationship_counts = data.relationship_counts;
+                    sem_type_counts = data.sem_types_counts;
+                    deflateButton.prop('disabled', true);
+                    expandButton.prop('disabled', true);
+                    total_nodes = data.node_count;
+                },
+                error: function (errMsg) {
+                    alert(errMsg);
+                }
+            });
+        }
 
         function plot(node_label, frozen, neighbors, skip, excl_rel, excl_sem_types) {
             $.ajax({
@@ -420,12 +444,21 @@
                 dataType: "json",
                 success: function (data) {
                     expanded_node = data.nodes[0];
-                    update_info(data.nodes[0]);
-                    update_toolbox(data.relationship_counts, data.sem_types_counts);
+                    update_info(expanded_node);
                     createForceNetwork(data.nodes, data.links);
                     deflateButton.prop('disabled', true);
                     expandButton.prop('disabled', true);
-                    if (data.skip_nodes < data.total_relationships) {
+                    let valid_nodes = total_nodes;
+                    for (let rel of excl_rel) {
+                        console.log(rel)
+                        valid_nodes = valid_nodes - relationship_counts[rel];
+                    }
+                    for (let sem_type of excl_sem_types) {
+                        console.log(sem_type)
+                        valid_nodes = valid_nodes - sem_type_counts[sem_type];
+                    }
+                    console.log(valid_nodes)
+                    if (data.skip_nodes < valid_nodes) {
                         nextNodesButton.prop('disabled', false);
                     } else {
                         nextNodesButton.prop('disabled', true);
@@ -463,7 +496,6 @@
             plot(expanded_node.label, frozen_sets, $('#numOfNeighbors').val(), 0,
                 excluded[0], excluded[1])
         }
-
 
         nextNodesButton.click(getNextNodes);
 
@@ -564,6 +596,8 @@
             minLength: 2,
             select: function (event, ui) {
                 frozen_sets = [];
+                skip_nodes = 0;
+                get_node_stats(ui.item.value);
                 plot(ui.item.value, frozen_sets, $('#numOfNeighbors').val(), 0, [], []);
                 add_articles(ui.item.value);
             }

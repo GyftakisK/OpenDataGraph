@@ -39,25 +39,21 @@ def graph():
         excl_rel = req_data["excluded_relationships"]
         excl_sem = req_data["excluded_semantic_types"]
 
-        db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'), os.environ.get('NEO4J_USER'),
+        db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'),
+                                os.environ.get('NEO4J_USER'),
                                 os.environ.get('NEO4J_PASS'))
-        node, relationships = db_manager.get_node_and_neighbors(node_label=node_label,
-                                                                num_of_neighbors=number_of_neighbours,
-                                                                skip_nodes=skip_nodes,
-                                                                excl_rel=excl_rel,
-                                                                excl_sem=excl_sem)
+        query_node, relationships = db_manager.get_node_and_neighbors(node_label=node_label,
+                                                                      num_of_neighbors=number_of_neighbours,
+                                                                      skip_nodes=skip_nodes,
+                                                                      excl_rel=excl_rel,
+                                                                      excl_sem=excl_sem)
         skip_nodes = skip_nodes + len(relationships)
         if frozen_sets:
             for cui_1, cui_2 in frozen_sets:
                 relationships.extend(db_manager.get_all_relationships_between_nodes_by_cui(cui_1, cui_2))
-        data = relationships_to_d3_data(node, relationships)
-        data["query_node_id"] = node.identity
-        relationship_counts, sem_types_counts = db_manager.get_neighbor_stats_for_node(node_label)
-        data["relationship_counts"] = relationship_counts
-        data["sem_types_counts"] = sem_types_counts
+        data = relationships_to_d3_data(query_node, relationships)
+        data["query_node_id"] = query_node.identity
         data['skip_nodes'] = skip_nodes
-        data["total_relationships"] = functools.reduce((lambda a, b: a + b),
-                                                       [count for count in relationship_counts.values()])
         return jsonify(data)
     else:
         return "Invalid term"
@@ -72,3 +68,19 @@ def articles():
     password = os.environ.get('NEO4J_PASS')
     data = NeoManager(host, port, user, password).get_articles_for_entity(node_label)
     return jsonify(data)
+
+
+@bp.route('/node', methods=['POST'])
+def node():
+    req_data = request.get_json()
+    if req_data:
+        node_label = req_data['label']
+
+        db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'),
+                                os.environ.get('NEO4J_USER'),
+                                os.environ.get('NEO4J_PASS'))
+        relationship_counts, sem_types_counts, node_count = db_manager.get_neighbor_stats_for_node(node_label)
+        return jsonify({"relationship_counts": relationship_counts, "sem_types_counts": sem_types_counts,
+                        "node_count": node_count})
+    else:
+        return "Invalid term"

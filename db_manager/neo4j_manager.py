@@ -80,9 +80,11 @@ class NeoManager(object):
 
         query = "MATCH (n:Entity)-[r]-(m:Entity) " \
                 "WHERE n.label = '{node_label}' AND NOT TYPE(r) IN {excl_rel} " \
+                "AND none(x IN m.sem_types WHERE x IN {excl_sem})" \
                 "RETURN r ORDER BY m.{order_by} " \
                 "SKIP {skip_nodes} LIMIT {num_of_neighbors}".format(node_label=node_label,
                                                                     excl_rel=excl_rel,
+                                                                    excl_sem=excl_sem,
                                                                     order_by=order_by,
                                                                     skip_nodes=skip_nodes,
                                                                     num_of_neighbors=num_of_neighbors)
@@ -98,17 +100,21 @@ class NeoManager(object):
 
         query = f"MATCH (n:Entity)-[relationship]-(m:Entity) " \
                 f"WHERE n.label = '{node_label}' " \
-                f"RETURN collect(m.sem_types) AS sem_types"
+                f"RETURN collect(m.sem_types) AS sem_types, COUNT(m) AS node_count"
         result = self._run_query(query)
-        sem_types_counts = {}
-        for _list in next(result)["sem_types"]:
-            for sem_type in _list:
-                if sem_type in sem_types_counts:
-                    sem_types_counts[sem_type] += 1
-                else:
-                    sem_types_counts[sem_type] = 1
 
-        return relationship_counts, sem_types_counts
+        sem_types_counts = {}
+        node_count = 0
+        if result.forward():
+            node_count = result.current["node_count"]
+            for _list in result.current["sem_types"]:
+                for sem_type in _list:
+                    if sem_type in sem_types_counts:
+                        sem_types_counts[sem_type] += 1
+                    else:
+                        sem_types_counts[sem_type] = 1
+
+        return relationship_counts, sem_types_counts, node_count
 
     def get_articles_for_entity(self, node_label: str):
         query = f"MATCH(n: Entity)-[r]-(m:Article) " \
