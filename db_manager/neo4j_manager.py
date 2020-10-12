@@ -127,9 +127,33 @@ class NeoManager(object):
                  "rel": record["rel"],
                  "occurrences": record["occurrences"]} for record in result]
 
-    def get_all_relationships_between_nodes_by_cui(self, cui_1, cui_2):
+    def get_all_relationships_between_nodes_by_cui(self, cui_1: str, cui_2: str):
         query = f"MATCH (n:Entity)-[r]-(m:Entity) " \
                 f"WHERE n.id = '{cui_1}' AND m.id = '{cui_2}' " \
                 f"RETURN r"
         result = self._run_query(query)
         return [record["r"] for record in result]
+
+    def get_articles_from_relationship(self, start_node_cui: str, end_node_cui: str, type: str):
+        query = f"MATCH (n:Entity)-[r]-(m:Entity) " \
+                f"WHERE n.id = '{start_node_cui}' AND m.id = '{end_node_cui}' AND TYPE(r) = '{type}' " \
+                f"RETURN r.sent_id AS sent_ids"
+        result = self._run_query(query)
+
+        occurrences = {}
+        for record in result:
+            for sent_id in record["sent_ids"]:
+                sent_id = sent_id.split('_')[0]
+                if sent_id not in occurrences:
+                    occurrences[sent_id] = 1
+                else:
+                    occurrences[sent_id] += 1
+
+        query = f"MATCH (m:Article) " \
+                f"WHERE m.id IN {list(occurrences.keys())} " \
+                f"RETURN m.id, m.title, m.journal"
+        result = self._run_query(query)
+        return [{"pmid": record["m.id"],
+                 "title": record["m.title"],
+                 "journal": record["m.journal"],
+                 "occurrences": occurrences[record["m.id"]]} for record in result]

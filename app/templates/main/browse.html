@@ -16,6 +16,18 @@
 
         }
 
+        text.selected {
+            fill: #0a0a0a;
+            font-size: 75%;
+            font-weight: bold;
+        }
+
+        text.not-selected {
+            fill: #aaa;
+            font-size: 60%;
+            font-weight: normal;
+        }
+
         table {
             display: flex;
             flex-flow: column;
@@ -101,6 +113,10 @@
                     </div>
                     <div class="card-body table-responsive">
                         <div id="nodeInfo" style="display: none">Semantic Type:</div>
+                        <div id="linkInfo" style="display: none">
+                            <div id="linkSourceNode" class="d-flex flex-row"></div>
+                            <div id="linkTargetNode" class="d-flex flex-row"></div>
+                        </div>
                         <h4>Related Articles</h4>
                         <table class="table" id="articleTable">
                             <thead>
@@ -144,6 +160,7 @@
         let links = [];
         let frozenSets = [];
         let focusNode = null;
+        let focusRel = null;
         let expandedNode = null;
 
         const expandButton = $('#expandButton');
@@ -154,7 +171,7 @@
         nextNodesButton.prop('disabled', true);
         const applyButton = $('#applyButton');
 
-        let color = d3.scaleOrdinal(get_sem_types(), d3.quantize(d3.interpolateRainbow, get_number_of_sem_types()));
+        let color = d3.scaleOrdinal(getSemCategories(), d3.quantize(d3.interpolateRdYlBu, getSemCategoriesNum()));
 
         const svg = d3.create("svg")
             .property("value", {nodes: [], links: []})
@@ -264,12 +281,36 @@
                 focusNode.node.select(".node_circle").attr("stroke", "#fff");
             }
 
+            if (focusRel != null) {
+                focusRel.link.attr("class", "edgelabel not-selected");
+                focusRel = null;
+            }
+
             focusNode = {"data": d, "node": d3.select(this)};
 
             focusNode.node.select(".node_circle").attr("stroke", "black");
             updateInfoBoxForNode(d);
-            addArticles(d.label);
+            addNodeArticles(d.label);
             expandButton.prop('disabled', false);
+        }
+
+        function clickedRel(event, d) {
+            if (event.defaultPrevented) return; // dragged
+
+            if (focusNode != null) {
+                focusNode.node.select(".node_circle").attr("stroke", "#fff");
+                focusNode = null;
+            }
+
+            if (focusRel != null) {
+                focusRel.link.attr("class", "edgelabel not-selected");
+            }
+
+            focusRel = {"data": d, "link": d3.select(this)};
+            focusRel.link.attr("class", "edgelabel selected");
+            updateInfoBoxForLink(d);
+            addLinkArticles(d.source.cui, d.target.cui, d.type);
+            expandButton.prop('disabled', true);
         }
 
         expandButton.click(expandNode);
@@ -314,13 +355,13 @@
             edgelabels = edgelabels.data(links)
                 .join(
                     enter => enter.append('text')
-                        .style("pointer-events", "none")
-                        .attr("class", "edgelabel")
-                        .attr("font-size", 10)
-                        .attr('fill', '#aaa')
+                        .style("pointer-events", "all")
+                        .style("user-select", "none")
+                        .attr("class", "edgelabel not-selected")
                         .attr("id", function (d, i) {
                             return 'edgelabel' + i
-                        }),
+                        })
+                        .on('click', clickedRel),
                     update => update,
                     exit => exit.remove()
                 );
@@ -333,7 +374,7 @@
                     return '#edgepath' + i
                 })
                 .style("text-anchor", "middle")
-                .style("pointer-events", "none")
+                .style("pointer-events", "all")
                 .attr("startOffset", "50%")
                 .text(function (d) {
                     return d.type
@@ -355,7 +396,7 @@
             let cicle = node.append("circle")
                 .attr("class", "node_circle")
                 .attr("r", nodeSize)
-                .attr("fill", d => color(d.sem_types[0]))
+                .attr("fill", d => color(getSemCategoryFromAbrv(d.sem_types[0])))
                 .attr("fill-opacity", 0.9)
                 .attr("stroke", "#fff")
                 .attr("stroke-width", "1.5px");
@@ -400,7 +441,7 @@
             for (const [name, count] of Object.entries(sem_types_counts)) {
                 semanticsBox.append('<div class="form-check">' +
                     '<input class="form-check-input sem-checkbox" type="checkbox" id="' + name + '" checked>' +
-                    '<label class="form-check-label" style=\'color:' + color(name) + '\' for="' + name + 'Checkbox">' +
+                    '<label class="form-check-label" style=\'color:' + color(getSemCategoryFromAbrv(name)) + '\' for="' + name + 'Checkbox">' +
                     sem_type_abrv_to_text(name) + ' (' + count + ')</label></div>');
             }
         }
@@ -450,14 +491,11 @@
                     expandButton.prop('disabled', true);
                     let valid_nodes = totalNodes;
                     for (let rel of excl_rel) {
-                        console.log(rel)
                         valid_nodes = valid_nodes - relationshipCounts[rel];
                     }
                     for (let sem_type of excl_sem_types) {
-                        console.log(sem_type)
                         valid_nodes = valid_nodes - semTypeCounts[sem_type];
                     }
-                    console.log(valid_nodes)
                     if (data.skip_nodes < valid_nodes) {
                         nextNodesButton.prop('disabled', false);
                     } else {
@@ -507,7 +545,10 @@
         function updateInfoBoxForNode(node) {
             $("#term").html('<strong>' + node.label + '</strong>');
 
-            let info = document.getElementById("nodeInfo");
+            let info = document.getElementById("linkInfo");
+            if (info.style.display === "block") info.style.display = "none";
+
+            info = document.getElementById("nodeInfo");
             if (info.style.display === "none") info.style.display = "block";
 
 
@@ -522,56 +563,87 @@
 
             node.sem_types.forEach(function (sem_type) {
                 let li = document.createElement('li');
-                li.style.color = color(sem_type);
+                li.style.color = color(getSemCategoryFromAbrv(sem_type));
                 ul.appendChild(li);
-                li.innerHTML = '<p style="color:' + color(sem_type) + '">' + sem_type_abrv_to_text(sem_type) + '<\p>';
+                li.innerHTML = '<p style="color:' + color(getSemCategoryFromAbrv(sem_type)) + '">'
+                    + getSemCategoryFromAbrv(sem_type) + ' -> '
+                    + sem_type_abrv_to_text(sem_type) + '<\p>';
             });
         }
 
-        function addArticles(node_label) {
-            $.post("{{url_for('main.articles')}}", {label: node_label})
-                .done(function (data) {
-                    function addArticleRow(pmid, title, journal, rel, occurrences) {
-                        // Get a reference to the table
-                        let tbody = document.getElementById("articleTableBody");
+        function updateInfoBoxForLink(link) {
+            $("#term").html('<strong>' + link.type + '</strong>');
 
-                        let newRow = tbody.insertRow(-1);
-                        if (rel === 'HAS_MESH') {
-                            newRow.setAttribute("class", "table-primary")
-                        }
+            let info = document.getElementById("nodeInfo");
+            if (info.style.display === "block") info.style.display = "none";
 
-                        let pmidCell = newRow.insertCell(0);
-                        pmidCell.setAttribute("style", "width: 15%");
-                        let pmidText = document.createTextNode(pmid);
-                        pmidCell.appendChild(pmidText);
+            info = document.getElementById("linkInfo");
+            if (info.style.display === "none") info.style.display = "block";
 
-                        let titleCell = newRow.insertCell(1);
-                        titleCell.setAttribute("style", "width: 55%");
-                        let titleText = document.createTextNode(title);
-                        titleCell.appendChild(titleText);
+            let sourceInfo = document.getElementById("linkSourceNode");
+            sourceInfo.innerHTML = '<p class="p-2"><strong>Source:</strong></p>'
+                + '<p class="p-2" style="color: '
+                + color(getSemCategoryFromAbrv(link.source.sem_types[0]))
+                + '">' + link.source.label + '</p>';
 
-                        let journalCell = newRow.insertCell(2);
-                        journalCell.setAttribute("style", "width: 15%");
-                        let journalText = document.createTextNode(journal);
-                        journalCell.appendChild(journalText);
+            let targetInfo = document.getElementById("linkTargetNode");
+            targetInfo.innerHTML = '<p class="p-2"><strong>Target:</strong></p>'
+                + '<p class="p-2" style="color: '
+                + color(getSemCategoryFromAbrv(link.target.sem_types[0]))
+                + '">' + link.target.label + '</p>';
+        }
 
-                        let occurencesCell = newRow.insertCell(3);
-                        occurencesCell.setAttribute("style", "width: 10%");
-                        let occurencesText = document.createTextNode(occurrences);
-                        occurencesCell.appendChild(occurencesText);
+        function addArticleRow(pmid, title, journal, rel, occurrences) {
+            // Get a reference to the table
+            let tbody = document.getElementById("articleTableBody");
 
-                        let linkCell = newRow.insertCell(4);
-                        linkCell.setAttribute("style", "width: 5%");
-                        let link = document.createElement('a');
-                        link.href = 'https://pubmed.ncbi.nlm.nih.gov/' + pmid;
-                        link.setAttribute("target", "_blank");
-                        link.innerHTML = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-link-45deg" fill="currentColor" xmlns="http://www.w3.org/2000/svg">\n' +
-                            '  <path d="M4.715 6.542L3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1.001 1.001 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4.018 4.018 0 0 1-.128-1.287z"/>\n' +
-                            '  <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 0 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 0 0-4.243-4.243L6.586 4.672z"/>\n' +
-                            '</svg>';
-                        linkCell.appendChild(link);
-                    }
+            let newRow = tbody.insertRow(-1);
+            if (rel === 'HAS_MESH') {
+                newRow.setAttribute("class", "table-primary")
+            }
 
+            let pmidCell = newRow.insertCell(0);
+            pmidCell.setAttribute("style", "width: 15%");
+            let pmidText = document.createTextNode(pmid);
+            pmidCell.appendChild(pmidText);
+
+            let titleCell = newRow.insertCell(1);
+            titleCell.setAttribute("style", "width: 55%");
+            let titleText = document.createTextNode(title);
+            titleCell.appendChild(titleText);
+
+            let journalCell = newRow.insertCell(2);
+            journalCell.setAttribute("style", "width: 15%");
+            let journalText = document.createTextNode(journal);
+            journalCell.appendChild(journalText);
+
+            let occurencesCell = newRow.insertCell(3);
+            occurencesCell.setAttribute("style", "width: 10%");
+            let occurencesText = document.createTextNode(occurrences);
+            occurencesCell.appendChild(occurencesText);
+
+            let linkCell = newRow.insertCell(4);
+            linkCell.setAttribute("style", "width: 5%");
+            let link = document.createElement('a');
+            link.href = 'https://pubmed.ncbi.nlm.nih.gov/' + pmid;
+            link.setAttribute("target", "_blank");
+            link.innerHTML = '<svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-link-45deg" fill="currentColor" xmlns="http://www.w3.org/2000/svg">\n' +
+                '  <path d="M4.715 6.542L3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1.001 1.001 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4.018 4.018 0 0 1-.128-1.287z"/>\n' +
+                '  <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 0 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 0 0-4.243-4.243L6.586 4.672z"/>\n' +
+                '</svg>';
+            linkCell.appendChild(link);
+        }
+
+        function addNodeArticles(node_label) {
+            $.ajax({
+                type: "POST",
+                url: "{{url_for('main.articles')}}",
+                data: JSON.stringify({
+                    "node_label": node_label
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
                     let prevBody = document.getElementById("articleTableBody");
                     if (prevBody) {
                         prevBody.remove();
@@ -582,7 +654,40 @@
                     tableRef.appendChild(newBody);
                     data.forEach(element => addArticleRow(element.pmid, element.title,
                         element.journal, element.rel, element.occurrences));
-                });
+                },
+                error: function (errMsg) {
+                    alert(errMsg);
+                }
+            });
+        }
+
+        function addLinkArticles(start_cui, end_cui, rel_type) {
+            $.ajax({
+                type: "POST",
+                url: "{{url_for('main.articles')}}",
+                data: JSON.stringify({
+                    "start_cui": start_cui,
+                    "end_cui": end_cui,
+                    "rel_type": rel_type
+                }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    let prevBody = document.getElementById("articleTableBody");
+                    if (prevBody) {
+                        prevBody.remove();
+                    }
+                    let tableRef = document.getElementById("articleTable");
+                    let newBody = document.createElement("TBODY");
+                    newBody.setAttribute("id", "articleTableBody");
+                    tableRef.appendChild(newBody);
+                    data.forEach(element => addArticleRow(element.pmid, element.title,
+                        element.journal, rel_type, element.occurrences));
+                },
+                error: function (errMsg) {
+                    alert(errMsg);
+                }
+            });
         }
 
         $("#search").autocomplete({
@@ -599,7 +704,7 @@
                 skipNodesNum = 0;
                 getNodeStats(ui.item.value);
                 plot(ui.item.value, frozenSets, $('#numOfNeighbors').val(), 0, [], []);
-                addArticles(ui.item.value);
+                addNodeArticles(ui.item.value);
             }
         });
 

@@ -61,12 +61,27 @@ def graph():
 
 @bp.route('/articles', methods=['POST'])
 def articles():
-    node_label = request.form.get('label')
+    req_data = request.get_json()
+    if not req_data:
+        return "Invalid JSON"
+
+    node_label = req_data.setdefault('node_label', None)
+    start_cui = req_data.setdefault('start_cui', None)
+    end_cui = req_data.setdefault('end_cui', None)
+    rel_type = req_data.setdefault('rel_type', None)
+
     host = os.environ.get('NEO4J_HOST')
     port = os.environ.get('NEO4J_PORT')
     user = os.environ.get('NEO4J_USER')
     password = os.environ.get('NEO4J_PASS')
-    data = NeoManager(host, port, user, password).get_articles_for_entity(node_label)
+    if node_label:
+        data = NeoManager(host, port, user, password).get_articles_for_entity(node_label)
+    elif start_cui and end_cui and rel_type:
+        data = NeoManager(host, port, user, password).get_articles_from_relationship(start_node_cui=start_cui,
+                                                                                     end_node_cui=end_cui,
+                                                                                     type=rel_type)
+    else:
+        return "Invalid input"
     return jsonify(data)
 
 
