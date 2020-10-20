@@ -198,12 +198,12 @@ class KnowledgeExtractor:
                                                damping_factor=damping_factor)
         self._neo4j_manager.drop_in_memory_graph('pagerank_graph')
 
-    def calculate_node2vec(self):
+    def calculate_node2vec(self, embedding_size: int = 128):
         """
         Method to calculate node2vec across the whole graph
         """
         self._neo4j_manager.create_in_memory_graph('node2vec_graph')
-        self._neo4j_manager.calculate_node2vec('node2vec_graph')
+        self._neo4j_manager.calculate_node2vec('node2vec_graph', embedding_size=embedding_size)
         self._neo4j_manager.drop_in_memory_graph('node2vec_graph')
 
     @staticmethod

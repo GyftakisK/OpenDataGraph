@@ -60,8 +60,9 @@ class NeoManager(object):
                 f"YIELD nodePropertiesWritten, ranIterations"
         self._run_query(query)
 
-    def calculate_node2vec(self, graph_name: str):
-        query = f"CALL gds.alpha.node2vec.write('{graph_name}', {{writeProperty: 'node2vec'}})"
+    def calculate_node2vec(self, graph_name: str, embedding_size: int = 128):
+        query = f"CALL gds.alpha.node2vec.write('{graph_name}', {{embeddingSize: {embedding_size}, " \
+                f"writeProperty: 'node2vec{embedding_size}'}})"
         self._run_query(query)
 
     def get_entities_matching_labels_beginning(self, search_string: str, limit: int):

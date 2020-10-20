@@ -124,12 +124,22 @@
                 <div class="card card-primary">
                     <div class="card-header bg-primary"><h3 class="card-title">Admin actions</h3></div>
                     <div class="card-body">
-                        <button id="calculate_pagerank" type="button" class="btn btn-outline-primary btn-lg">
-                            Calculate PageRank
-                        </button>
-                        <button id="calculate_node2vec" type="button" class="btn btn-outline-primary btn-lg">
-                            Calculate Node2Vec
-                        </button>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">
+                                <button id="calculate_pagerank" type="button" class="btn btn-outline-primary btn-lg">
+                                    Calculate PageRank
+                                </button>
+                            </li>
+                            <li class="list-group-item">
+                                <label class="" for="embeddingSize">Embedding Dimension</label>
+                                <input type="number" class="form-control" id="embeddingSize" value="128" step="32"
+                                       min="32" max="256">
+                                <br>
+                                <button id="calculate_node2vec" type="button" class="btn btn-outline-primary btn-lg">
+                                    Calculate Node2Vec
+                                </button>
+                            </li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -220,9 +230,11 @@
         const calculateNode2vecBtn = $('#calculate_node2vec');
 
         function calculate_node2vec() {
-            $.post("{{ url_for('admin.calculate_node2vec') }}", function (data) {
-                $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
-            });
+            $.post("{{ url_for('admin.calculate_node2vec') }}",
+                {embeddingSize: $('#embeddingSize').val()},
+                function (data) {
+                    $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
+                });
         }
 
         calculateNode2vecBtn.click(calculate_node2vec);

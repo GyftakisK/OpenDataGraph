@@ -144,6 +144,7 @@ def calculate_pagerank():
 @bp.route('calculate_node2vec', methods=['POST'])
 @login_required
 def calculate_node2vec():
-    task = calculate_node2vec_task.apply_async()
-    save_task(task.task_id, "calculate_node2vec", "")
+    embedding_size = request.form.get("embeddingSize")
+    task = calculate_node2vec_task.apply_async([embedding_size])
+    save_task(task.task_id, "calculate_node2vec", str({"embeddingSize": embedding_size}))
     return jsonify({'message': 'Job {} created for Node2Vec calculation'.format(task.task_id)})

@@ -40,6 +40,6 @@ def calculate_pagerank_task():
 
 
 @celery.task(queue="jobsQueue")
-def calculate_node2vec_task():
+def calculate_node2vec_task(embedding_size):
     with current_app.app_context():
-        extractor.calculate_node2vec()
+        extractor.calculate_node2vec(embedding_size)
