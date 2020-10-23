@@ -171,8 +171,6 @@
         nextNodesButton.prop('disabled', true);
         const applyButton = $('#applyButton');
 
-        let color = d3.scaleOrdinal(getSemCategories(), d3.quantize(d3.interpolateRdYlBu, getSemCategoriesNum()));
-
         const svg = d3.create("svg")
             .property("value", {nodes: [], links: []})
             .attr("viewBox", [-width / 2, -height / 2, width, height]);
@@ -396,7 +394,7 @@
             let cicle = node.append("circle")
                 .attr("class", "node_circle")
                 .attr("r", nodeSize)
-                .attr("fill", d => color(getSemCategoryFromAbrv(d.sem_types[0])))
+                .attr("fill", d => getColorForSemTypeAbrv(d.sem_types[0]))
                 .attr("fill-opacity", 0.9)
                 .attr("stroke", "#fff")
                 .attr("stroke-width", "1.5px");
@@ -412,6 +410,7 @@
                 .attr("class", "node_text")
                 .style("text-anchor", "middle")
                 .attr("font-size", 11)
+                .style("text-shadow", "white 0px 0px 5px")
                 .text(function (d) {
                     return d.label;
                 });
@@ -441,7 +440,7 @@
             for (const [name, count] of Object.entries(sem_types_counts)) {
                 semanticsBox.append('<div class="form-check">' +
                     '<input class="form-check-input sem-checkbox" type="checkbox" id="' + name + '" checked>' +
-                    '<label class="form-check-label" style=\'color:' + color(getSemCategoryFromAbrv(name)) + '\' for="' + name + 'Checkbox">' +
+                    '<label class="form-check-label" style=\'color:' + getColorForSemTypeAbrv(name) + '\' for="' + name + 'Checkbox">' +
                     sem_type_abrv_to_text(name) + ' (' + count + ')</label></div>');
             }
         }
@@ -563,9 +562,9 @@
 
             node.sem_types.forEach(function (sem_type) {
                 let li = document.createElement('li');
-                li.style.color = color(getSemCategoryFromAbrv(sem_type));
+                li.style.color = getColorForSemTypeAbrv(sem_type);
                 ul.appendChild(li);
-                li.innerHTML = '<p style="color:' + color(getSemCategoryFromAbrv(sem_type)) + '">'
+                li.innerHTML = '<p style="color:' + getColorForSemTypeAbrv(sem_type) + '">'
                     + getSemCategoryFromAbrv(sem_type) + ' -> '
                     + sem_type_abrv_to_text(sem_type) + '<\p>';
             });
@@ -583,13 +582,13 @@
             let sourceInfo = document.getElementById("linkSourceNode");
             sourceInfo.innerHTML = '<p class="p-2"><strong>Source:</strong></p>'
                 + '<p class="p-2" style="color: '
-                + color(getSemCategoryFromAbrv(link.source.sem_types[0]))
+                + getColorForSemTypeAbrv(link.source.sem_types[0])
                 + '">' + link.source.label + '</p>';
 
             let targetInfo = document.getElementById("linkTargetNode");
             targetInfo.innerHTML = '<p class="p-2"><strong>Target:</strong></p>'
                 + '<p class="p-2" style="color: '
-                + color(getSemCategoryFromAbrv(link.target.sem_types[0]))
+                + getColorForSemTypeAbrv(link.target.sem_types[0])
                 + '">' + link.target.label + '</p>';
         }
 

@@ -276,6 +276,25 @@ const semTypesCategories = [
     "Substance",
 ]
 
+const semTypeCategoriesToColor = {
+"Activity": "#000075",
+"Anatomical Structure": "#808000",
+"Conceptual Entity": "#ffd8b1",
+"Finding": "#bfef45",
+"Group": "#911eb4",
+"Group Attribute": "#f032e6",
+"Idea or Concept": "#123512",
+"Intellectual Product": "#a9a9a9",
+"Language": "#fabed4",
+"Manufactured Object": "#4363d8",
+"Occupation or Discipline": "#ffe119",
+"Organism": "#800000",
+"Organism Attribute": "#e6194B",
+"Organization": "#aaffc3",
+"Phenomenon or Process": "#469990",
+"Substance": "#f58231",
+}
+
 function sem_types_abrv_to_text(sem_types) {
     return sem_types.map(sem_type => semTypesAbrvToFull[sem_type]).join(' | ');
 }
@@ -302,4 +321,13 @@ function getSemCategoriesNum() {
 
 function getSemCategoryFromAbrv(sem_type) {
     return semTypeAbrvToCategory[sem_type];
+}
+
+function getColorForSemTypeCategory(semTypeCategory) {
+    return semTypeCategoriesToColor[semTypeCategory];
+}
+
+
+function getColorForSemTypeAbrv(semTypeAbrv) {
+    return semTypeCategoriesToColor[getSemCategoryFromAbrv(semTypeAbrv)]
 }
