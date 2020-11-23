@@ -138,6 +138,7 @@ class NeoManager(object):
     def get_articles_from_relationship(self, start_node_cui: str, end_node_cui: str, type: str):
         query = f"MATCH (n:Entity)-[r]-(m:Entity) " \
                 f"WHERE n.id = '{start_node_cui}' AND m.id = '{end_node_cui}' AND TYPE(r) = '{type}' " \
+                f"AND EXISTS(r.sent_id) " \
                 f"RETURN r.sent_id AS sent_ids"
         result = self._run_query(query)
 
