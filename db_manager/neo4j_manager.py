@@ -21,6 +21,15 @@ class NeoManager(object):
         print("Query completed")
         return result
 
+    def _run_transaction(self, queries: str):
+        self._connect()
+        print("Running {} cypher queries in transaction".format(len(queries)))
+        tx = self.__graph.begin()
+        for query in queries:
+            tx.run(query)
+        tx.commit()
+        print("Transaction completed")
+
     def delete_all_orphan_nodes(self):
         query = "MATCH (n) WHERE NOT (n)--() DELETE n"
         self._run_query(query)
@@ -65,14 +74,14 @@ class NeoManager(object):
                 f"writeProperty: 'node2vec{embedding_size}'}})"
         self._run_query(query)
 
-    def get_entities_matching_labels_beginning(self, search_string: str, limit: int):
+    def get_entities_matching_labels_beginning(self, search_string: str, limit: int, order_by: str = 'ranking'):
         query = f"MATCH (n:Entity) WHERE n.label =~ '(?i){search_string}.*' " \
-                f"RETURN n.label AS label LIMIT {limit}"
+                f"RETURN n.label AS label ORDER BY n.{order_by} DESC LIMIT {limit} "
         result = self._run_query(query)
         return [node["label"] for node in result]
 
     def get_node_and_neighbors(self, node_label: str, num_of_neighbors: int, skip_nodes: int,
-                               order_by: str = 'pagerank', excl_rel: list = [], excl_sem: list = []):
+                               order_by: str = 'ranking', excl_rel: list = [], excl_sem: list = []):
         query = f"MATCH (n:Entity) " \
                 f"WHERE n.label = '{node_label}' " \
                 f"RETURN n"
@@ -81,8 +90,8 @@ class NeoManager(object):
 
         query = "MATCH (n:Entity)-[r]-(m:Entity) " \
                 "WHERE n.label = '{node_label}' AND NOT TYPE(r) IN {excl_rel} " \
-                "AND none(x IN m.sem_types WHERE x IN {excl_sem})" \
-                "RETURN r ORDER BY m.{order_by} " \
+                "AND none(x IN m.sem_types WHERE x IN {excl_sem}) " \
+                "RETURN r ORDER BY m.{order_by} DESC " \
                 "SKIP {skip_nodes} LIMIT {num_of_neighbors}".format(node_label=node_label,
                                                                     excl_rel=excl_rel,
                                                                     excl_sem=excl_sem,
@@ -159,3 +168,44 @@ class NeoManager(object):
                  "title": record["m.title"],
                  "journal": record["m.journal"],
                  "occurrences": occurrences[record["m.id"]]} for record in result]
+
+    def get_count_of_entities_linked_to_other_entities(self):
+        query = "MATCH (n:Entity)--(:Entity) " \
+                "RETURN COUNT(DISTINCT n) AS entity_nodes"
+        result = self._run_query(query)
+        return next(result)["entity_nodes"]
+
+    def get_count_of_entities_with_pagerank(self):
+        query = "MATCH (n:Entity)--(:Entity) WHERE EXISTS(n.pagerank) " \
+                "RETURN COUNT(DISTINCT n) AS nodes_with_pagerank"
+        result = self._run_query(query)
+        return next(result)["nodes_with_pagerank"]
+
+    def get_count_of_entities_with_node2vec32(self):
+        query = "MATCH (n:Entity)--(:Entity) WHERE EXISTS(n.node2vec32) " \
+                "RETURN COUNT(DISTINCT n) AS nodes_with_node2vec32"
+        result = self._run_query(query)
+        return next(result)["nodes_with_node2vec32"]
+
+    def get_node_features(self):
+        query = "MATCH (n:Entity) " \
+                "RETURN n.id AS identifier, n.node2vec32 AS node2vec32, " \
+                "n.sem_types AS sem_types, n.pagerank AS pagerank"
+        result = self._run_query(query)
+
+        data = {}
+        for record in result:
+            data[record["identifier"]] = {"node2vec32": record["node2vec32"],
+                                          "sem_types": record["sem_types"],
+                                          "pagerank": record["pagerank"] if "pagerank" in record else 0}
+
+        return data
+
+    def set_node_ranking(self, node_cui: str, ranking: float):
+        query = f"MATCH (n:Entity {{ id: '{node_cui}' }}) SET n.ranking = {ranking}"
+        self._run_query(query)
+
+    def set_nodes_ranking(self, node_ranking_dict: dict):
+        queries = [f"MATCH (n:Entity {{ id: '{node_cui}' }}) SET n.ranking = {ranking}"
+                   for node_cui, ranking in node_ranking_dict.items()]
+        self._run_transaction(queries)

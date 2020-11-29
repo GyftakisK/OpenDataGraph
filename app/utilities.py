@@ -1,3 +1,4 @@
+import glob
 import os
 from flask import flash
 from zipfile import ZipFile
@@ -57,3 +58,20 @@ def relationships_to_d3_data(query_node, relationships):
                       "target": nodes[end_node.identity]["id"],
                       "type": type(relationship).__name__})
     return {"nodes": list(nodes.values()), "links": links}
+
+
+def delete_all_files_with_extension(path: str, extension: str):
+    """
+    Deletes all files with specified expression under given path (best effort)
+    :param path:
+    :param extension:
+    :return:
+    """
+
+    file_list = glob.glob(os.path.join(path, f'*.{extension}'))
+
+    for file_path in file_list:
+        try:
+            os.remove(file_path)
+        except:
+            pass

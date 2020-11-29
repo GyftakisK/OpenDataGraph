@@ -1,5 +1,8 @@
+import os
 from app import celery, extractor
+from db_manager.neo4j_manager import NeoManager
 from flask import current_app
+from node_ranker.ml_ranker import MLRanker
 from .utilities import handle_uploaded_file
 
 
@@ -43,3 +46,28 @@ def calculate_pagerank_task():
 def calculate_node2vec_task(embedding_size):
     with current_app.app_context():
         extractor.calculate_node2vec(embedding_size)
+
+
+@celery.task(queue="jobsQueue")
+def update_ranking_task(model_name):
+    with current_app.app_context():
+        ranker = MLRanker()
+        ranker.load_model(model_name)
+        db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'),
+                                os.environ.get('NEO4J_USER'), os.environ.get('NEO4J_PASS'))
+
+        node_count = db_manager.get_count_of_entities_linked_to_other_entities()
+        node_count_with_pagerank = db_manager.get_count_of_entities_with_pagerank()
+        node_count_with_node2vec32 = db_manager.get_count_of_entities_with_node2vec32()
+
+        if node_count != node_count_with_pagerank:
+            extractor.calculate_pagerank()
+
+        if node_count != node_count_with_node2vec32:
+            extractor.calculate_node2vec(32)
+
+        feature_data = db_manager.get_node_features()
+
+        nodes_rank = ranker.rank_nodes(feature_data)
+
+        db_manager.set_nodes_ranking(nodes_rank)

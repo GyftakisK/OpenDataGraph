@@ -24,7 +24,7 @@ def autocomplete():
     port = os.environ.get('NEO4J_PORT')
     user = os.environ.get('NEO4J_USER')
     password = os.environ.get('NEO4J_PASS')
-    matches = NeoManager(host, port, user, password).get_entities_matching_labels_beginning(search_term, 10)
+    matches = NeoManager(host, port, user, password).get_entities_matching_labels_beginning(search_term, 15, 'ranking')
     return jsonify(matching_results=matches)
 
 

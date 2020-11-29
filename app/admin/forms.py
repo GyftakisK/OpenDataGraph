@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import (StringField, SubmitField, FileField, SelectField)
 from wtforms.validators import DataRequired
-from flask_wtf.file import FileRequired
+from flask_wtf.file import FileRequired, FileAllowed
 
 
 class LiteratureForm(FlaskForm):

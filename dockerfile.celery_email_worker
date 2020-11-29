@@ -11,6 +11,11 @@ RUN apk add --update \
     libxslt-dev \
     yajl-dev \
     openssl-dev \
+    libgcc \
+    libquadmath \
+    musl \
+    gfortran \
+    lapack-dev \
   && rm -rf /var/cache/apk/*
 
 RUN adduser -D openDataGraph

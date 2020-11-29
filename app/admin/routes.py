@@ -6,7 +6,8 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from app import extractor, db
 from app.tasks import (add_disease_task, update_literature_task, add_drugbank_task, add_obo_task,
-                       remove_structured_resource, calculate_pagerank_task, calculate_node2vec_task)
+                       remove_structured_resource, calculate_pagerank_task, calculate_node2vec_task,
+                       update_ranking_task)
 from app.utilities import flash_error, flash_success
 from app.models import Task, User
 
@@ -148,3 +149,13 @@ def calculate_node2vec():
     task = calculate_node2vec_task.apply_async([embedding_size])
     save_task(task.task_id, "calculate_node2vec", str({"embeddingSize": embedding_size}))
     return jsonify({'message': 'Job {} created for Node2Vec calculation'.format(task.task_id)})
+
+
+@bp.route('update_ranking', methods=['POST'])
+@login_required
+def update_ranking():
+    model_name = request.form.get("modelName")
+    task = update_ranking_task.apply_async([model_name])
+    save_task(task.task_id, "update_ranking", str({"modelName": model_name}))
+    return jsonify({'return_code': 'SUCCESS',
+                    'message': 'Job {} created for node ranking update'.format(task.task_id)})
