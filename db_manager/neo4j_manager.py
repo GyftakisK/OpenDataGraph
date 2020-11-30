@@ -21,7 +21,7 @@ class NeoManager(object):
         print("Query completed")
         return result
 
-    def _run_transaction(self, queries: str):
+    def _run_transaction(self, queries: list):
         self._connect()
         print("Running {} cypher queries in transaction".format(len(queries)))
         tx = self.__graph.begin()
@@ -188,7 +188,7 @@ class NeoManager(object):
         return next(result)["nodes_with_node2vec32"]
 
     def get_node_features(self):
-        query = "MATCH (n:Entity) " \
+        query = "MATCH (n:Entity)--(:Entity) " \
                 "RETURN n.id AS identifier, n.node2vec32 AS node2vec32, " \
                 "n.sem_types AS sem_types, n.pagerank AS pagerank"
         result = self._run_query(query)
@@ -201,11 +201,19 @@ class NeoManager(object):
 
         return data
 
-    def set_node_ranking(self, node_cui: str, ranking: float):
-        query = f"MATCH (n:Entity {{ id: '{node_cui}' }}) SET n.ranking = {ranking}"
-        self._run_query(query)
-
     def set_nodes_ranking(self, node_ranking_dict: dict):
         queries = [f"MATCH (n:Entity {{ id: '{node_cui}' }}) SET n.ranking = {ranking}"
                    for node_cui, ranking in node_ranking_dict.items()]
         self._run_transaction(queries)
+
+    def get_entities_without_ranking(self):
+        query = "MATCH (n:Entity) " \
+                "WHERE NOT EXISTS(n.ranking) " \
+                "RETURN n.id AS identifier"
+        result = self._run_query(query)
+
+        return [record["identifier"] for record in result]
+
+    def remove_entities_ranking(self):
+        query = "MATCH (n:Entity) WHERE EXISTS(n.ranking) REMOVE n.ranking"
+        self._run_query(query)

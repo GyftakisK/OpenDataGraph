@@ -70,4 +70,8 @@ def update_ranking_task(model_name):
 
         nodes_rank = ranker.rank_nodes(feature_data)
 
+        db_manager.remove_entities_ranking()
         db_manager.set_nodes_ranking(nodes_rank)
+        unranked_nodes = db_manager.get_entities_without_ranking()
+        min_ranking = min(nodes_rank.values()) - 1.0
+        db_manager.set_nodes_ranking({node_id: min_ranking for node_id in unranked_nodes})
