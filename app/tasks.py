@@ -66,12 +66,20 @@ def update_ranking_task(model_name):
         if node_count != node_count_with_node2vec32:
             extractor.calculate_node2vec(32)
 
-        feature_data = db_manager.get_node_features()
-
-        nodes_rank = ranker.rank_nodes(feature_data)
-
         db_manager.remove_entities_ranking()
-        db_manager.set_nodes_ranking(nodes_rank)
+        current_index = 0
+        increment = 1000
+        min_ranking = 10000000
+        while current_index < node_count:
+
+            feature_data = db_manager.get_node_features(limit=increment, skip=current_index)
+
+            nodes_rank = ranker.rank_nodes(feature_data)
+
+            db_manager.set_nodes_ranking(nodes_rank)
+            min_ranking = min(min(nodes_rank.values()), min_ranking)
+            current_index += increment
+
         unranked_nodes = db_manager.get_entities_without_ranking()
-        min_ranking = min(nodes_rank.values()) - 1.0
+        min_ranking -= 1.0
         db_manager.set_nodes_ranking({node_id: min_ranking for node_id in unranked_nodes})

@@ -187,10 +187,11 @@ class NeoManager(object):
         result = self._run_query(query)
         return next(result)["nodes_with_node2vec32"]
 
-    def get_node_features(self):
-        query = "MATCH (n:Entity)--(:Entity) " \
-                "RETURN n.id AS identifier, n.node2vec32 AS node2vec32, " \
-                "n.sem_types AS sem_types, n.pagerank AS pagerank"
+    def get_node_features(self, limit, skip):
+        query = f"MATCH (n:Entity)--(:Entity) " \
+                f"RETURN DISTINCT n.id AS identifier, n.node2vec32 AS node2vec32, " \
+                f"n.sem_types AS sem_types, n.pagerank AS pagerank " \
+                f"SKIP {skip} LIMIT {limit}"
         result = self._run_query(query)
 
         data = {}
