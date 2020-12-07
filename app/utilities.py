@@ -75,3 +75,17 @@ def delete_all_files_with_extension(path: str, extension: str):
             os.remove(file_path)
         except:
             pass
+
+
+def normilize_mesh_term(mesh_term: str):
+    """
+    Reverse words in comma separated MeSH terms
+    :param mesh_term: a MeSH term (e.g. Muscular Dystrophy, Duchenne)
+    :return: MeSH term without comma suffixed with the word after comma
+             (e.g. Duchenne Muscular Dystrophy)
+    """
+    if "," not in mesh_term:
+        return mesh_term
+
+    substrings = mesh_term.split(",")
+    return " ".join([substring.strip() for substring in substrings[::-1]])

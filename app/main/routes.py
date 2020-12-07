@@ -1,15 +1,24 @@
 import os
 import functools
+from app import extractor
 from app.main import bp
 from flask import render_template, request, jsonify
 from db_manager.neo4j_manager import NeoManager
-from app.utilities import relationships_to_d3_data
+from app.utilities import relationships_to_d3_data, normilize_mesh_term
 
 
 @bp.route('/')
 @bp.route('/index')
 def index():
-    return render_template('main/index.html')
+    literature_status = extractor.get_literature_status()
+    diseases = [normilize_mesh_term(mesh_term) for mesh_term in literature_status["mesh_terms"]]
+    node_counts, entity_rel_type_counts, article_rel_type_counts = extractor.get_neo4j_manager().get_graph_info()
+    return render_template('main/index.html',
+                           diseases=f'{", ".join(diseases[:-1])} and {diseases[:-1]}' if len(diseases) > 1
+                                    else f'{diseases[0]}',
+                           node_counts=node_counts,
+                           ent_relationship_count=len(entity_rel_type_counts),
+                           art_relationship_count=len(article_rel_type_counts))
 
 
 @bp.route('/browse')

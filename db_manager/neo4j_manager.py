@@ -218,3 +218,18 @@ class NeoManager(object):
     def remove_entities_ranking(self):
         query = "MATCH (n:Entity) WHERE EXISTS(n.ranking) REMOVE n.ranking"
         self._run_query(query)
+
+    def get_graph_info(self):
+        query = "MATCH (n) RETURN labels(n) AS labels, COUNT(n) AS count"
+        result = self._run_query(query)
+        node_counts = {record["labels"][0]: record["count"] for record in result}
+
+        query = "MATCH (:Entity)-[r]-(:Entity) RETURN type(r) AS type, COUNT(r) AS count ORDER BY count DESC"
+        result = self._run_query(query)
+        entity_rel_type_counts = {record["type"]: record["count"] for record in result}
+
+        query = "MATCH (:Article)-[r]-(:Entity) RETURN type(r) AS type, COUNT(r) AS count ORDER BY count DESC"
+        result = self._run_query(query)
+        article_rel_type_counts = {record["type"]: record["count"] for record in result}
+
+        return node_counts, entity_rel_type_counts, article_rel_type_counts

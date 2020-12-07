@@ -1,5 +1,68 @@
 {% extends "base.html" %}
 
+{% block head %}
+    {{ super() }}
+    <style>
+        .jumbotron {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .jumbotron .container {
+            position: relative;
+            z-index: 2;
+
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 3px;
+        }
+
+        .jumbotron-background {
+            object-fit: cover;
+            font-family: 'object-fit: cover;';
+            position: absolute;
+            top: 0;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            opacity: 0.5;
+            background-image: url({{ url_for('static', filename='jumbotron.png') }});
+            background-size: cover;
+            background-position: center;
+            -webkit-filter: blur(3px);
+            filter: blur(3px);
+            filter: progid:DXImageTransform.Microsoft.Blur(PixelRadius='3');
+        }
+    </style>
+{% endblock %}
+
 {% block app_content %}
-    <h1>UNDER CONSTRUCTION</h1>
+    <div class="container-fluid">
+
+        <div class="jumbotron jumbotron-fluid">
+            <div class="jumbotron-background">
+            </div>
+            <div class="container">
+                <h1 class="display-4">Welcome to Open Data Graph!</h1>
+                <p class="lead">
+                    Open Data Graph is an automatically generated Knowledge Graph for <strong>{{ diseases }}</strong>.
+                </p>
+                <hr class="my-4">
+                <p>
+                    It combines relationships extracted from PubMed and PubMed Central with Biomedical ontologies and
+                    databases.
+                </p>
+                <p>
+                    Currently, the Knowledge Graph consists of <strong>{{ node_counts["Entity"] }}</strong> Entities and <strong>{{ node_counts["Article"] }}</strong> Articles.
+                    Entities are connected to other entities by <strong>{{ ent_relationship_count }}</strong> types of relationships,
+                    while they are connected to Articles using <strong>{{ art_relationship_count }}</strong> types of relationships
+                </p>
+
+                <a class="btn btn-primary btn-lg" href="{{ url_for('main.browse') }}" role="button">Start Exploring</a>
+            </div>
+
+        </div>
+    </div>
+
 {% endblock %}

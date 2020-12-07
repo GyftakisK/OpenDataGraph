@@ -206,6 +206,13 @@ class KnowledgeExtractor:
         self._neo4j_manager.calculate_node2vec('node2vec_graph', embedding_size=embedding_size)
         self._neo4j_manager.drop_in_memory_graph('node2vec_graph')
 
+    def get_neo4j_manager(self) -> NeoManager:
+        """
+        Method to get a neo4j manager instance
+        :return: NeoManager
+        """
+        return self._neo4j_manager
+
     @staticmethod
     def _get_num_of_cores() -> int:
         """
