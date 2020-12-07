@@ -73,6 +73,7 @@ class KnowledgeExtractor:
         self._run_medknow()
         metadata_input = {'filename': get_filename_from_file_path(path_to_file), "type": "DRUGBANK", "version": version}
         self._update_job_metadata(job_name, metadata_input)
+        self._update_graph_info()
 
     def update_obo(self, path_to_file: str, obo_type: str, version: str = None):
         """
@@ -94,6 +95,7 @@ class KnowledgeExtractor:
         self._run_medknow()
         metadata_input = {'filename': get_filename_from_file_path(path_to_file), "type": obo_type, "version": version}
         self._update_job_metadata(job_name, metadata_input)
+        self._update_graph_info()
 
     def remove_resource(self, resource_name: str):
         """
@@ -108,6 +110,7 @@ class KnowledgeExtractor:
         self._neo4j_manager.delete_relationships_with_empty_list_property('resource')
         self._neo4j_manager.delete_all_orphan_nodes()
         self._mongodb_manager.delete_entry_from_field('metadata', "job", resource_name)
+        self._update_graph_info()
 
     def add_disease(self, mesh_term: str):
         """
@@ -129,6 +132,7 @@ class KnowledgeExtractor:
         date_from = datetime.date(1900, 1, 1)
         self._update_literature(self._get_dataset_id_from_mesh_term(mesh_term),
                                 date_from, date_to, job_name, mesh_terms, mesh_term)
+        self._update_graph_info()
 
     def update_diseases(self):
         """
@@ -143,6 +147,7 @@ class KnowledgeExtractor:
             raise NoDiseasesInGraph()
         date_to = datetime.datetime.utcnow()
         self._update_literature("update", date_from, date_to, job_name, mesh_terms, mesh_terms)
+        self._update_graph_info()
 
     def cleanup(self):
         """
@@ -212,6 +217,27 @@ class KnowledgeExtractor:
         :return: NeoManager
         """
         return self._neo4j_manager
+
+    def get_graph_info(self):
+        """
+        Method to acquire graph info from MongoDB or Neo4j
+        :return: node_counts, entity_rel_type_counts, article_rel_type_counts dictionaries
+        """
+        graph_info_entry = self._mongodb_manager.get_entry_from_field('metadata', "job", "graph_info")
+        if not graph_info_entry:
+            graph_info = self._update_graph_info()
+        else:
+            graph_info = graph_info_entry["input"]
+        return graph_info
+
+    def _update_graph_info(self):
+        """
+        Method to update graph info from Neo4j and cache them to MongoDB
+        :return: node_counts, entity_rel_type_counts, article_rel_type_counts dictionaries
+        """
+        graph_info = self._neo4j_manager.get_graph_info()
+        self._update_job_metadata('graph_info', graph_info)
+        return graph_info
 
     @staticmethod
     def _get_num_of_cores() -> int:

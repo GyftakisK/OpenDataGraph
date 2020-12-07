@@ -12,7 +12,7 @@ from app.utilities import relationships_to_d3_data, normilize_mesh_term
 def index():
     literature_status = extractor.get_literature_status()
     diseases = [normilize_mesh_term(mesh_term) for mesh_term in literature_status["mesh_terms"]]
-    node_counts, entity_rel_type_counts, article_rel_type_counts = extractor.get_neo4j_manager().get_graph_info()
+    node_counts, entity_rel_type_counts, article_rel_type_counts = extractor.get_graph_info()
     return render_template('main/index.html',
                            diseases=f'{", ".join(diseases[:-1])} and {diseases[:-1]}' if len(diseases) > 1
                                     else f'{diseases[0]}',
