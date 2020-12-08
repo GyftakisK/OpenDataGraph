@@ -91,7 +91,8 @@
                                         </td>
                                         <td>
                                             <button type="submit" class="btn removeButton align-items-center">
-                                                <svg width="1em" height="1em" viewBox="0 0 16 16" class="bi bi-trash"
+                                                <svg width="1em" height="1em" viewBox="0 0 16 16"
+                                                     class="bi bi-trash"
                                                      fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                                                     <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"></path>
                                                     <path fill-rule="evenodd"
@@ -149,15 +150,15 @@
                             <li class="list-group-item">
                                 <label class="" for="embeddingSize">Embedding Dimension</label>
                                 <input type="number" class="form-control" id="embeddingSize" value="128" step="32"
-                                       min="32" max="256">
+                                       min="32" max="256" style="max-width: 200px">
                                 <br>
                                 <button id="calculate_node2vec" type="button" class="btn btn-outline-primary btn-lg">
                                     Calculate Node2Vec
                                 </button>
                             </li>
                             <li class="list-group-item">
-                                <label class="mr-sm-2" for="modelSelect">Ranking Model</label>
-                                <select class="custom-select mr-sm-2" id="modelSelect">
+                                <label class="" for="modelSelect">Ranking Model</label>
+                                <select class="form-control" id="modelSelect" style="max-width: 200px">
                                     <option selected>RankSVM</option>
                                 </select>
                                 <br>

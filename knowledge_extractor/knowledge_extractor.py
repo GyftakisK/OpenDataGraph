@@ -177,7 +177,7 @@ class KnowledgeExtractor:
                  "version": entry["input"]["version"],
                  "last_update": entry["lastUpdate"]}
                 for entry in self._mongodb_manager.get_all_entries('metadata')
-                if entry['job'] != "disease_literature"]
+                if entry['job'] not in ["disease_literature", "graph_info"]]
 
     def print_job_status(self):
         """
