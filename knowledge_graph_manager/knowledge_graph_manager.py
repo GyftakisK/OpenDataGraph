@@ -9,6 +9,7 @@ from db_manager.neo4j_manager import NeoManager
 from harvesters.biomedical_harvesters import HarvestDrugBankWrapper, HarvestOBOWrapper, HarvestEntrezWrapper
 from medknow.config import settings
 from medknow.tasks import taskCoordinator
+from node_ranker.ml_ranker import MLRanker
 from .metamap_server_manager import MetamapServerManager
 from utilities import (get_filename_from_file_path, NotSupportedOboFile, DiseaseAlreadyInGraph, NoDiseasesInGraph,
                        ResourceNotInGraph)
@@ -16,7 +17,7 @@ from typing import List, Dict
 DEBUG = False 
 
 
-class KnowledgeExtractor:
+class GraphManager:
     def __init__(self):
         self._mongodb_host = None
         self._mongodb_port = None
@@ -210,6 +211,41 @@ class KnowledgeExtractor:
         self._neo4j_manager.create_in_memory_graph('node2vec_graph')
         self._neo4j_manager.calculate_node2vec('node2vec_graph', embedding_size=embedding_size)
         self._neo4j_manager.drop_in_memory_graph('node2vec_graph')
+
+    def calculate_ranking(self, model_name: str):
+        """
+        Method to calculate node ranking using pretrained ML model
+        :param: model_name: The name of the model used for ranking
+        """
+        ranker = MLRanker()
+        ranker.load_model(model_name)
+
+        node_count = self._neo4j_manager.get_count_of_entities_linked_to_other_entities()
+        node_count_with_pagerank = self._neo4j_manager.get_count_of_entities_with_pagerank()
+        node_count_with_node2vec32 = self._neo4j_manager.get_count_of_entities_with_node2vec32()
+
+        if node_count != node_count_with_pagerank:
+            self.calculate_pagerank()
+
+        if node_count != node_count_with_node2vec32:
+            self.calculate_node2vec(32)
+
+        self._neo4j_manager.remove_entities_ranking()
+        current_index = 0
+        increment = 1000
+        min_ranking = 10000000
+        while current_index < node_count:
+            feature_data = self._neo4j_manager.get_node_features(limit=increment, skip=current_index)
+
+            nodes_rank = ranker.rank_nodes(feature_data)
+
+            self._neo4j_manager.set_nodes_ranking(nodes_rank)
+            min_ranking = min(min(nodes_rank.values()), min_ranking)
+            current_index += increment
+
+        unranked_nodes = self._neo4j_manager.get_entities_without_ranking()
+        min_ranking -= 1.0
+        self._neo4j_manager.set_nodes_ranking({node_id: min_ranking for node_id in unranked_nodes})
 
     def get_neo4j_manager(self) -> NeoManager:
         """

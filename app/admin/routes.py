@@ -4,7 +4,7 @@ from flask import render_template, redirect, url_for, jsonify, current_app, requ
 from app.admin.forms import LiteratureForm, StructuredDrugbankForm, StructuredOboForm
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
-from app import extractor, db
+from app import graph_manager, db
 from app.tasks import (add_disease_task, update_literature_task, add_drugbank_task, add_obo_task,
                        remove_structured_resource, calculate_pagerank_task, calculate_node2vec_task,
                        update_ranking_task)
@@ -23,8 +23,8 @@ def save_task(task_id, task_name, task_inputs):
 @bp.route('/dashboard', methods=['GET', 'POST'])
 @login_required
 def admin():
-    literature_status = extractor.get_literature_status()
-    structured_status = extractor.get_structured_resources_jobs_status()
+    literature_status = graph_manager.get_literature_status()
+    structured_status = graph_manager.get_structured_resources_jobs_status()
     form_literature = LiteratureForm()
     if form_literature.submit1.data and form_literature.validate():
         mesh_term = form_literature.mesh_term.data

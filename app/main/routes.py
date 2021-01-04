@@ -1,18 +1,16 @@
 import os
-import functools
-from app import extractor
+from app import graph_manager
 from app.main import bp
 from flask import render_template, request, jsonify
-from db_manager.neo4j_manager import NeoManager
 from app.utilities import relationships_to_d3_data, normilize_mesh_term
 
 
 @bp.route('/')
 @bp.route('/index')
 def index():
-    literature_status = extractor.get_literature_status()
+    literature_status = graph_manager.get_literature_status()
     diseases = [normilize_mesh_term(mesh_term) for mesh_term in literature_status["mesh_terms"]]
-    node_counts, entity_rel_type_counts, article_rel_type_counts = extractor.get_graph_info()
+    node_counts, entity_rel_type_counts, article_rel_type_counts = graph_manager.get_graph_info()
     return render_template('main/index.html',
                            diseases=f'{", ".join(diseases[:-1])} and {diseases[:-1]}' if len(diseases) > 1
                                     else f'{diseases[0]}',
@@ -29,11 +27,7 @@ def browse():
 @bp.route('/autocomplete', methods=['GET'])
 def autocomplete():
     search_term = request.args.get('q')
-    host = os.environ.get('NEO4J_HOST')
-    port = os.environ.get('NEO4J_PORT')
-    user = os.environ.get('NEO4J_USER')
-    password = os.environ.get('NEO4J_PASS')
-    matches = NeoManager(host, port, user, password).get_entities_matching_labels_beginning(search_term, 15, 'ranking')
+    matches = graph_manager.get_neo4j_manager().get_entities_matching_labels_beginning(search_term, 15, 'ranking')
     return jsonify(matching_results=matches)
 
 
@@ -48,9 +42,7 @@ def graph():
         excl_rel = req_data["excluded_relationships"]
         excl_sem = req_data["excluded_semantic_types"]
 
-        db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'),
-                                os.environ.get('NEO4J_USER'),
-                                os.environ.get('NEO4J_PASS'))
+        db_manager = graph_manager.get_neo4j_manager()
         query_node, relationships = db_manager.get_node_and_neighbors(node_label=node_label,
                                                                       num_of_neighbors=number_of_neighbours,
                                                                       skip_nodes=skip_nodes,
@@ -79,16 +71,14 @@ def articles():
     end_cui = req_data.setdefault('end_cui', None)
     rel_type = req_data.setdefault('rel_type', None)
 
-    host = os.environ.get('NEO4J_HOST')
-    port = os.environ.get('NEO4J_PORT')
-    user = os.environ.get('NEO4J_USER')
-    password = os.environ.get('NEO4J_PASS')
+    db_manager = graph_manager.get_neo4j_manager()
+
     if node_label:
-        data = NeoManager(host, port, user, password).get_articles_for_entity(node_label)
+        data = db_manager.get_articles_for_entity(node_label)
     elif start_cui and end_cui and rel_type:
-        data = NeoManager(host, port, user, password).get_articles_from_relationship(start_node_cui=start_cui,
-                                                                                     end_node_cui=end_cui,
-                                                                                     type=rel_type)
+        data = db_manager.get_articles_from_relationship(start_node_cui=start_cui,
+                                                         end_node_cui=end_cui,
+                                                         type=rel_type)
     else:
         return "Invalid input"
     return jsonify(data)
@@ -100,9 +90,7 @@ def node():
     if req_data:
         node_label = req_data['label']
 
-        db_manager = NeoManager(os.environ.get('NEO4J_HOST'), os.environ.get('NEO4J_PORT'),
-                                os.environ.get('NEO4J_USER'),
-                                os.environ.get('NEO4J_PASS'))
+        db_manager = graph_manager.get_neo4j_manager()
         relationship_counts, sem_types_counts, node_count = db_manager.get_neighbor_stats_for_node(node_label)
         return jsonify({"relationship_counts": relationship_counts, "sem_types_counts": sem_types_counts,
                         "node_count": node_count})
