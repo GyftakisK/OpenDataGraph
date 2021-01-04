@@ -47,7 +47,7 @@ class GraphManager:
         self._mongodb_port = int(os.environ.get('MONGODB_PORT'))
         self._mongodb_db_name = os.environ.get('MONGODB_NAME')
         self._temp_dir = os.environ.get('UPLOAD_FOLDER')
-        self._semrep_bin_dir = os.environ.get('SEMREP_BIN_DIR')
+        self._semrep_bin_dir = os.path.join(os.environ.get('SEMREP_DIR'), 'bin')
         self._neo4j_host = os.environ.get('NEO4J_HOST')
         self._neo4j_port = os.environ.get('NEO4J_PORT')
         self._neo4j_user = os.environ.get('NEO4J_USER')
