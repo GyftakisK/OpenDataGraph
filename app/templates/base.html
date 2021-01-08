@@ -45,11 +45,11 @@
                            data-toggle="dropdown" href="#" id=adminDropdown">
                             Admin<span class="caret"></span>
                         </a>
-                        <ul class="dropdown-menu" aria-labelledby="adminDropdown">
+                        <div class="dropdown-menu" aria-labelledby="adminDropdown">
                             <a class="dropdown-item" href="{{ url_for('admin.admin') }}">Dashboard</a>
                             <a class="dropdown-item" href="{{ url_for('admin.monitor_jobs') }}">Job Monitor</a>
-
-                        </ul>
+                            <a class="dropdown-item" href="{{ url_for('admin.user_management') }}">Users</a>
+                        </div>
                     </li>
                     {% endif %}
                     {% if current_user.is_anonymous %}

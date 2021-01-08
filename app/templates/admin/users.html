@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+{% block head %}
+    {{ super() }}
+    <style>
+        table {
+            display: flex;
+            flex-flow: column;
+            width: 100%;
+        }
+
+        thead {
+            flex: 0 0 auto;
+            padding-right: 16px;
+        }
+
+        tbody {
+            max-height: 400px;
+            flex: 1 1 auto;
+            display: block;
+            overflow-y: scroll;
+            overflow-x: hidden;
+        }
+
+        tr {
+            width: 100%;
+            display: table;
+            table-layout: fixed;
+        }
+    </style>
+{% endblock %}
+
+{% block app_content %}
+    <div class="container">
+        <h1>User Management</h1>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header bg-primary">
+                        <h2 class="card-title">Users</h2>
+                    </div>
+                    <div class="card-body bg-transparent">
+                        <table id="job-status-table" class="table table-hover">
+                            <thead>
+                            <tr>
+                                <th>Username</th>
+                                <th>Email</th>
+                                <th>Admin</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for user in users %}
+                                <tr>
+                                    <td>{{ user.username }}</td>
+                                    <td>{{ user.email }}</td>
+                                    <td>
+                                        <div>
+                                            <input type="checkbox"
+                                                   class="form-control-input"
+                                                   id="user{{ user.id }}" {% if user.is_admin %} checked {% endif %}>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        $(document).ready(function () {
+            function changeUserRights(userId, isAdmin) {
+                $.ajax({
+                    type: "POST",
+                    url: "{{url_for('admin.set_user_admin_rights')}}",
+                    data: JSON.stringify({
+                        "userId": userId,
+                        "isAdmin": isAdmin
+
+                    }),
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    success: function (data) {
+                        if (data.return_code === "SUCCESS") {
+                            $('#content').prepend('<div class="alert alert-success" role="alert">' + data.message + '</div>')
+                        } else {
+                            $('#content').prepend('<div class="alert alert-warning" role="info">' + data.message + '</div>')
+                        }
+                        $("#user" + userId).prop("checked", isAdmin);
+                        window.scrollTo(0, 0);
+                    }
+                });
+            }
+
+            $(":checkbox").change(function () {
+                let returnVal = confirm("Are you sure?");
+                if (returnVal) {
+                    changeUserRights($(this).attr('id'), this.checked);
+                }
+            });
+        });
+
+    </script>
+{% endblock %}

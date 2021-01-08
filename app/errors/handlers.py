@@ -8,6 +8,11 @@ def wants_json_response():
         request.accept_mimetypes['text/html']
 
 
+@bp.app_errorhandler(403)
+def access_denied(error):
+    return render_template('errors/403.html'), 403
+
+
 @bp.app_errorhandler(404)
 def not_found_error(error):
     return render_template('errors/404.html'), 404

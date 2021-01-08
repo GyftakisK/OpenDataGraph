@@ -1,15 +1,25 @@
 import os
+from app import graph_manager, db
 from app.admin import bp
-from flask import render_template, redirect, url_for, jsonify, current_app, request
+from flask import render_template, redirect, url_for, jsonify, current_app, request, abort
 from app.admin.forms import LiteratureForm, StructuredDrugbankForm, StructuredOboForm
 from flask_login import login_required, current_user
+from functools import wraps
 from werkzeug.utils import secure_filename
-from app import graph_manager, db
 from app.tasks import (add_disease_task, update_literature_task, add_drugbank_task, add_obo_task,
                        remove_structured_resource, calculate_pagerank_task, calculate_node2vec_task,
                        update_ranking_task)
 from app.utilities import flash_error, flash_success
 from app.models import Task, User
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_admin:
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def save_task(task_id, task_name, task_inputs):
@@ -22,6 +32,7 @@ def save_task(task_id, task_name, task_inputs):
 @bp.route('/', methods=['GET', 'POST'])
 @bp.route('/dashboard', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin():
     literature_status = graph_manager.get_literature_status()
     structured_status = graph_manager.get_structured_resources_jobs_status()
@@ -93,6 +104,7 @@ def admin():
 
 @bp.route('update_literature', methods=['POST'])
 @login_required
+@admin_required
 def update_literature():
     task = update_literature_task.apply_async()
     save_task(task.task_id, "update_literature_task",
@@ -102,6 +114,7 @@ def update_literature():
 
 @bp.route('monitor_jobs', methods=['GET'])
 @login_required
+@admin_required
 def monitor_jobs():
     tasks = Task.query.all()
     jobs = [{'task_id': task.task_id,
@@ -117,6 +130,7 @@ def monitor_jobs():
 
 @bp.route('remove_resource', methods=['POST'])
 @login_required
+@admin_required
 def remove_resource():
     resource_type = request.form.get("type")
     resource_version = request.form.get("version")
@@ -136,6 +150,7 @@ def remove_resource():
 
 @bp.route('calculate_pagerank', methods=['POST'])
 @login_required
+@admin_required
 def calculate_pagerank():
     task = calculate_pagerank_task.apply_async()
     save_task(task.task_id, "calculate_pagerank", "")
@@ -144,6 +159,7 @@ def calculate_pagerank():
 
 @bp.route('calculate_node2vec', methods=['POST'])
 @login_required
+@admin_required
 def calculate_node2vec():
     embedding_size = request.form.get("embeddingSize")
     task = calculate_node2vec_task.apply_async([embedding_size])
@@ -153,9 +169,39 @@ def calculate_node2vec():
 
 @bp.route('update_ranking', methods=['POST'])
 @login_required
+@admin_required
 def update_ranking():
     model_name = request.form.get("modelName")
     task = update_ranking_task.apply_async([model_name])
     save_task(task.task_id, "update_ranking", str({"modelName": model_name}))
     return jsonify({'return_code': 'SUCCESS',
                     'message': 'Job {} created for node ranking update'.format(task.task_id)})
+
+
+@bp.route('user_management', methods=['GET'])
+@login_required
+@admin_required
+def user_management():
+    users = User.query.all()
+    return render_template('admin/users.html',
+                           title="User Management",
+                           users=sorted(users, key=lambda x: x.is_admin, reverse=True))
+
+
+@bp.route('set_user_admin_rights', methods=['POST'])
+@login_required
+@admin_required
+def set_user_admin_rights():
+    req_data = request.get_json()
+    user_id = int(req_data["userId"].strip("user"))
+    if current_user.id == user_id:
+        return jsonify({'return_code': 'ERROR',
+                        'message': 'Changing your own administrative rights is forbidden'})
+
+    is_admin = req_data["isAdmin"]
+    user = User.query.get(user_id)
+    user.is_admin = is_admin
+    db.session.commit()
+    return jsonify({'return_code': 'SUCCESS',
+                    'message': '{} {} administrative rights'.format(user.username,
+                                                                    "was given" if is_admin else "was striped of")})
