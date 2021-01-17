@@ -47,7 +47,7 @@ Change INVALID_UID to a user ID that has access to __SEMREP_DIR__ and __METAMAP_
 
 ## Deployment
 
-You can deploy the system using (Docker Compose)[https://docs.docker.com/compose/gettingstarted/#step-4-build-and-run-your-app-with-compose] and the provided __docker-compose.yml__, by running:
+You can deploy the system using [Docker Compose](https://docs.docker.com/compose/gettingstarted/#step-4-build-and-run-your-app-with-compose) and the provided __docker-compose.yml__, by running:
 ```bash
 docker-compose up
 ```
