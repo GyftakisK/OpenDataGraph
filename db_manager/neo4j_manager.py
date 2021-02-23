@@ -74,6 +74,12 @@ class NeoManager(object):
                 f"writeProperty: 'node2vec{embedding_size}'}})"
         self._run_query(query)
 
+    def get_entities_matching_label(self, search_string: str, limit: int, order_by: str = 'ranking'):
+        query = f"MATCH (n:Entity) WHERE n.label =~ '(?i){search_string}' " \
+                f"RETURN n.label AS label ORDER BY n.{order_by} DESC LIMIT {limit} "
+        result = self._run_query(query)
+        return [node["label"] for node in result]
+
     def get_entities_matching_labels_beginning(self, search_string: str, limit: int, order_by: str = 'ranking'):
         query = f"MATCH (n:Entity) WHERE n.label =~ '(?i){search_string}.*' " \
                 f"RETURN n.label AS label ORDER BY n.{order_by} DESC LIMIT {limit} "

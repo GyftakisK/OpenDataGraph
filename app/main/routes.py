@@ -27,7 +27,10 @@ def browse():
 @bp.route('/autocomplete', methods=['GET'])
 def autocomplete():
     search_term = request.args.get('q')
-    matches = graph_manager.get_neo4j_manager().get_entities_matching_labels_beginning(search_term, 15, 'ranking')
+    matches = []
+    matches.extend(graph_manager.get_neo4j_manager().get_entities_matching_label(search_term, 15, 'ranking'))
+    lexicographical_matches = graph_manager.get_neo4j_manager().get_entities_matching_labels_beginning(search_term, 15, 'ranking')
+    matches.extend([match for match in lexicographical_matches if match not in matches])
     return jsonify(matching_results=matches)
 
 
