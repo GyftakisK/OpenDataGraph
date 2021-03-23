@@ -31,19 +31,26 @@ class NeoManager(object):
         print("Transaction completed")
 
     def delete_all_orphan_nodes(self):
-        query = "MATCH (n) WHERE NOT (n)--() DELETE n"
+        query = "call apoc.periodic.iterate(\"MATCH (n) WHERE NOT (n)--() return n\"," \
+                                    "\"DELETE n\"," \
+                                    "{batchSize:1000}) yield batches, total return batches, total"
+
         self._run_query(query)
 
     def remove_item_from_list_property(self, property_name, item_name):
-        query = 'MATCH ()-[r]->() ' \
-                'WHERE "{item_name}" in r.{property_name} ' \
-                'SET r.{property_name} = ' \
-                'apoc.coll.removeAll(r.{property_name}, ["{item_name}"])'.format(item_name=item_name,
-                                                                                 property_name=property_name)
+        query = "call apoc.periodic.iterate(\"MATCH ()-[r]->() WHERE '{item_name}' in r.{property_name} return r\"," \
+                                           "\"SET r.{property_name} = apoc.coll.removeAll(r.{property_name}, ['{item_name}'])\"," \
+                                           "{{batchSize:1000}}) yield batches, total " \
+                                           "return batches, total".format(item_name=item_name,
+                                                                          property_name=property_name)
+
         self._run_query(query)
 
     def delete_relationships_with_empty_list_property(self, property_name):
-        query = 'MATCH ()-[r]->() WHERE r.{property_name} = [] DELETE r'.format(property_name=property_name)
+        query = "call apoc.periodic.iterate(\"MATCH ()-[r]->() WHERE r.{property_name} = [] return r\"," \
+                                           "\"DELETE r\"," \
+                                           "{{batchSize:1000}}) yield batches, total return batches, total".format(property_name=property_name)
+
         self._run_query(query)
 
     def create_in_memory_graph(self, graph_name: str):
