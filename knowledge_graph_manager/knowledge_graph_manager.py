@@ -431,6 +431,7 @@ class GraphManager:
         """
         settings["pipeline"]["in"]["type"] = "text"
         settings["pipeline"]["trans"]["semrep"] = True
+        settings['pipeline']['out']['mongo_sentences'] = True
         settings["load"]["mongo"]["collection"] = collection
         settings["load"]["mongo"]["file_path"] = "mongodb://{host}:{port}/{db}|{collection}".format(
             host=self._mongodb_host,
@@ -448,6 +449,10 @@ class GraphManager:
         settings["out"]["json"]["json_text_field"] = "text"
         settings["out"]["json"]["json_id_field"] = "id"
         settings["out"]["json"]["json_label_field"] = "title"
+        settings["mongo_sentences"]["uri"] = "mongodb://{host}:{port}".format(host=self._mongodb_host,
+                                                                              port=self._mongodb_port)
+        settings["mongo_sentences"]["db"] = self._mongodb_db_name
+        settings["mongo_sentences"]["collection"] = "pubmed_sentences"
 
     @staticmethod
     def _run_medknow():
