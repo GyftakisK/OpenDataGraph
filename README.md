@@ -1,7 +1,7 @@
 # Open Data Graph
 ## Dependencies
  * [Docker Compose](https://docs.docker.com/compose/install/) 
- * Local installation of [SemRep v1.7](https://semrep.nlm.nih.gov/SemRep.v1.7_Installation.html), which also requires local installation of [Metamap](https://metamap.nlm.nih.gov/Installation.shtml)
+ * Local installation of [SemRep v1.8](https://github.com/lhncbc/SemRep), which also requires local installation of [Metamap2016v2](https://lhncbc.nlm.nih.gov/ii/tools/MetaMap/run-locally/MainDownload.html)
  * Active account to [UMLS Terminology Services](https://uts.nlm.nih.gov/uts/)
  
  ## Configuration
